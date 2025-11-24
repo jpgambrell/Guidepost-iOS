@@ -10,20 +10,21 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var viewModel = ImageGridViewModel()
     @State private var showUploadSheet = false
+    @State private var isRefreshing = false
 
     let columns = [
         GridItem(.adaptive(minimum: 100), spacing: 2)
     ]
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 VStack(spacing: 0) {
                     SearchBar(text: $viewModel.searchText)
                         .padding(.horizontal)
                         .padding(.vertical, 8)
 
-                    if viewModel.isLoading && viewModel.analysisResults.isEmpty {
+                    if viewModel.analysisResults.isEmpty && viewModel.errorMessage == nil {
                         ProgressView("Loading images...")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if let error = viewModel.errorMessage {
@@ -39,10 +40,13 @@ struct HomeView: View {
                                 .multilineTextAlignment(.center)
                             Button("Try Again") {
                                 Task {
+                                    isRefreshing = true
                                     await viewModel.loadAnalysisResults()
+                                    isRefreshing = false
                                 }
                             }
                             .buttonStyle(.borderedProminent)
+                            .disabled(isRefreshing)
                         }
                         .padding()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,13 +72,15 @@ struct HomeView: View {
                             LazyVGrid(columns: columns, spacing: 2) {
                                 ForEach(viewModel.filteredResults) { result in
                                     NavigationLink(destination: ImageDetailDestination(analysisResult: result, viewModel: viewModel)) {
-                                        ImageGridCell(imageId: result.imageId, viewModel: viewModel)
+                                        ImageGridCell(analysisResult: result, viewModel: viewModel)
                                     }
                                 }
                             }
                         }
                         .refreshable {
-                            await viewModel.refreshAnalysisResults()
+                            isRefreshing = true
+                            await viewModel.loadAnalysisResults()
+                            isRefreshing = false
                         }
                     }
                 }
@@ -87,12 +93,9 @@ struct HomeView: View {
                 .padding(.trailing, 20)
                 .padding(.bottom, 20)
             }
-        }
-        .task {
-            await viewModel.loadAnalysisResults()
-        }
-        .sheet(isPresented: $showUploadSheet) {
-            ImageUploadView(viewModel: viewModel)
+            .sheet(isPresented: $showUploadSheet) {
+                ImageUploadView(viewModel: viewModel)
+            }
         }
     }
 }
@@ -126,12 +129,12 @@ struct SearchBar: View {
 // MARK: - Image Grid Cell
 
 struct ImageGridCell: View {
-    let imageId: String
+    let analysisResult: ImageAnalysisResult
     @ObservedObject var viewModel: ImageGridViewModel
     @State private var loadedImage: UIImage?
 
     var body: some View {
-        Group {
+        ZStack(alignment: .bottom) {
             if let uiImage = loadedImage {
                 Image(uiImage: uiImage)
                     .resizable()
@@ -146,9 +149,22 @@ struct ImageGridCell: View {
                         ProgressView()
                     }
             }
+
+            // Processing overlay
+            if analysisResult.status == .processing {
+                Text("Processing")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.orange.opacity(0.9))
+                    .cornerRadius(4)
+                    .padding(.bottom, 4)
+            }
         }
         .task {
-            loadedImage = await viewModel.loadImageData(for: imageId)
+            loadedImage = await viewModel.loadImageData(for: analysisResult.imageId)
         }
     }
 }

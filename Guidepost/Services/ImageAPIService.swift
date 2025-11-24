@@ -37,8 +37,8 @@ enum APIError: Error, LocalizedError {
 class ImageAPIService {
     static let shared = ImageAPIService()
 
-    private let uploadServiceURL = "http://localhost:3000"
-    private let analysisServiceURL = "http://localhost:3001"
+    private let uploadServiceURL = "http://192.168.68.63:3000"
+    private let analysisServiceURL = "http://192.168.68.63:3001"
     private let session: URLSession
 
     private init() {

@@ -10,7 +10,7 @@ import PhotosUI
 
 struct ImageUploadView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject var viewModel: ImageGridViewModel
+    @ObservedObject var viewModel: ImageGridViewModel
 
     @State private var selectedImage: UIImage?
     @State private var showCamera = false
@@ -20,7 +20,7 @@ struct ImageUploadView: View {
     @State private var showSuccessMessage = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 if let image = selectedImage {
                     Image(uiImage: image)

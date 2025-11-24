@@ -13,11 +13,11 @@ import Combine
 class ImageGridViewModel: ObservableObject {
     @Published var analysisResults: [ImageAnalysisResult] = []
     @Published var imageCache: [String: UIImage] = [:]
-    @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var searchText = ""
 
     private let apiService = ImageAPIService.shared
+    private var loadTask: Task<Void, Never>?
 
     var filteredResults: [ImageAnalysisResult] {
         if searchText.isEmpty {
@@ -30,17 +30,33 @@ class ImageGridViewModel: ObservableObject {
         }
     }
 
+    init() {
+        // Load data once on initialization
+        loadTask = Task {
+            await loadAnalysisResults()
+        }
+    }
+
     func loadAnalysisResults() async {
-        isLoading = true
+        // Cancel any existing load task
+        loadTask?.cancel()
+
         errorMessage = nil
 
-        do {
-            analysisResults = try await apiService.fetchAllAnalysis()
-        } catch {
-            errorMessage = error.localizedDescription
+        loadTask = Task {
+            do {
+                let results = try await apiService.fetchAllAnalysis()
+                if !Task.isCancelled {
+                    analysisResults = results
+                }
+            } catch {
+                if !Task.isCancelled {
+                    errorMessage = error.localizedDescription
+                }
+            }
         }
 
-        isLoading = false
+        await loadTask?.value
     }
 
     func loadImageData(for imageId: String) async -> UIImage? {
@@ -59,10 +75,6 @@ class ImageGridViewModel: ObservableObject {
         }
 
         return nil
-    }
-
-    func refreshAnalysisResults() async {
-        await loadAnalysisResults()
     }
 
     func uploadImage(_ image: UIImage) async throws -> UploadedImage {

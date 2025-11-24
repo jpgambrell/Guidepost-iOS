@@ -13,6 +13,19 @@ struct APIResponse<T: Codable>: Codable {
     let success: Bool
     let message: String?
     let data: T?
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case message
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        message = try container.decodeIfPresent(String.self, forKey: .message)
+        data = try container.decodeIfPresent(T.self, forKey: .data)
+    }
 }
 
 // MARK: - Upload Service Models
@@ -25,6 +38,27 @@ struct UploadedImage: Codable, Identifiable {
     let size: Int
     let uploadedAt: String
     let path: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case filename
+        case originalName
+        case mimetype
+        case size
+        case uploadedAt
+        case path
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        filename = try container.decode(String.self, forKey: .filename)
+        originalName = try container.decode(String.self, forKey: .originalName)
+        mimetype = try container.decode(String.self, forKey: .mimetype)
+        size = try container.decode(Int.self, forKey: .size)
+        uploadedAt = try container.decode(String.self, forKey: .uploadedAt)
+        path = try container.decode(String.self, forKey: .path)
+    }
 
     var uploadDate: Date? {
         let formatter = ISO8601DateFormatter()
@@ -41,12 +75,36 @@ struct UploadedImage: Codable, Identifiable {
 struct ImagesListResponse: Codable {
     let success: Bool
     let data: [UploadedImage]
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        data = try container.decode([UploadedImage].self, forKey: .data)
+    }
 }
 
 struct UploadResponse: Codable {
     let success: Bool
     let message: String
     let data: UploadedImage
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case message
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        message = try container.decode(String.self, forKey: .message)
+        data = try container.decode(UploadedImage.self, forKey: .data)
+    }
 }
 
 // MARK: - Analysis Service Models
@@ -60,6 +118,29 @@ struct ImageAnalysisResult: Codable, Identifiable {
     let description: String?
     let status: AnalysisStatus
     let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case imageId
+        case filename
+        case analyzedAt
+        case keywords
+        case detectedText
+        case description
+        case status
+        case error
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        imageId = try container.decode(String.self, forKey: .imageId)
+        filename = try container.decode(String.self, forKey: .filename)
+        analyzedAt = try container.decode(String.self, forKey: .analyzedAt)
+        keywords = try container.decodeIfPresent([String].self, forKey: .keywords)
+        detectedText = try container.decodeIfPresent([String].self, forKey: .detectedText)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        status = try container.decode(AnalysisStatus.self, forKey: .status)
+        error = try container.decodeIfPresent(String.self, forKey: .error)
+    }
 
     var id: String { imageId }
 
@@ -96,9 +177,31 @@ enum AnalysisStatus: String, Codable {
 struct AnalysisListResponse: Codable {
     let success: Bool
     let data: [ImageAnalysisResult]
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        data = try container.decode([ImageAnalysisResult].self, forKey: .data)
+    }
 }
 
 struct AnalysisResponse: Codable {
     let success: Bool
     let data: ImageAnalysisResult
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        data = try container.decode(ImageAnalysisResult.self, forKey: .data)
+    }
 }
