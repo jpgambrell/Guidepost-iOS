@@ -13,7 +13,7 @@ struct HomeView: View {
     @State private var isRefreshing = false
 
     let columns = [
-        GridItem(.adaptive(minimum: 100), spacing: 2)
+        GridItem(.adaptive(minimum: 100), spacing: 8)
     ]
 
     var body: some View {
@@ -76,7 +76,7 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ScrollView {
-                            LazyVGrid(columns: columns, spacing: 2) {
+                            LazyVGrid(columns: columns, spacing: 8) {
                                 ForEach(viewModel.filteredResults) { result in
                                     NavigationLink(
                                         destination: ImageDetailDestination(analysisResult: result)
@@ -149,7 +149,7 @@ struct ImageGridCell: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 100, height: 100)
+                    .frame(width: 125, height: 125)
                     .clipped()
             } else {
                 Rectangle()
@@ -174,6 +174,7 @@ struct ImageGridCell: View {
                     .padding(.bottom, 4)
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .task {
             loadedImage = await viewModel.loadImageData(for: analysisResult.imageId)
         }
