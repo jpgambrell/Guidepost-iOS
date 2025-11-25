@@ -5,12 +5,13 @@
 //  Created by John Gambrell on 11/21/25.
 //
 
-import SwiftUI
+import AVFoundation
 import PhotosUI
+import SwiftUI
 
 struct ImageUploadView: View {
     @Environment(\.dismiss) var dismiss
-    @ObservedObject var viewModel: ImageGridViewModel
+    @Environment(ImageGridViewModel.self) private var viewModel
 
     @State private var selectedImage: UIImage?
     @State private var showCamera = false
@@ -18,6 +19,7 @@ struct ImageUploadView: View {
     @State private var isUploading = false
     @State private var uploadError: String?
     @State private var showSuccessMessage = false
+    @State private var showPermissionAlert = false
 
     var body: some View {
         NavigationStack {
@@ -33,20 +35,20 @@ struct ImageUploadView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "photo.on.rectangle.angled")
                             .font(.system(size: 80))
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
 
                         Text("No image selected")
                             .font(.headline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 300)
                     .background(Color.gray.opacity(0.1))
-                    .cornerRadius(12)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
                 VStack(spacing: 12) {
-                    Button(action: { showCamera = true }) {
+                    Button(action: checkCameraPermission) {
                         HStack {
                             Image(systemName: "camera.fill")
                             Text("Take Photo")
@@ -54,8 +56,8 @@ struct ImageUploadView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
 
                     Button(action: { showPhotoPicker = true }) {
@@ -66,8 +68,8 @@ struct ImageUploadView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
 
                     if selectedImage != nil {
@@ -84,8 +86,8 @@ struct ImageUploadView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(isUploading ? Color.gray : Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .disabled(isUploading)
                     }
@@ -94,7 +96,7 @@ struct ImageUploadView: View {
 
                 if let error = uploadError {
                     Text(error)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                         .font(.caption)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
@@ -125,6 +127,17 @@ struct ImageUploadView: View {
             } message: {
                 Text("Image uploaded and sent for analysis!")
             }
+            .alert("Camera Permission Required", isPresented: $showPermissionAlert) {
+                Button("Settings", role: .none) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please enable camera access in Settings to take photos.")
+            }
+
         }
     }
 
@@ -142,6 +155,25 @@ struct ImageUploadView: View {
                 uploadError = error.localizedDescription
             }
             isUploading = false
+        }
+    }
+
+    private func checkCameraPermission() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            showCamera = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                if granted {
+                    DispatchQueue.main.async {
+                        showCamera = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showPermissionAlert = true
+        @unknown default:
+            break
         }
     }
 }
@@ -173,7 +205,10 @@ struct ImagePicker: UIViewControllerRepresentable {
             self.parent = parent
         }
 
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
             if let image = info[.originalImage] as? UIImage {
                 parent.selectedImage = image
             }

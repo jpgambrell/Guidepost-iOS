@@ -7,14 +7,14 @@
 
 import Foundation
 import UIKit
-import Combine
+import Observation
 
-@MainActor
-class ImageGridViewModel: ObservableObject {
-    @Published var analysisResults: [ImageAnalysisResult] = []
-    @Published var imageCache: [String: UIImage] = [:]
-    @Published var errorMessage: String?
-    @Published var searchText = ""
+@Observable
+class ImageGridViewModel {
+    var analysisResults: [ImageAnalysisResult] = []
+    var imageCache: [String: UIImage] = [:]
+    var errorMessage: String?
+    var searchText = ""
 
     private let apiService = ImageAPIService.shared
     private var loadTask: Task<Void, Never>?

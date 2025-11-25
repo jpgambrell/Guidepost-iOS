@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject private var viewModel = ImageGridViewModel()
+    @Environment(ImageGridViewModel.self) private var viewModel
     @State private var showUploadSheet = false
     @State private var isRefreshing = false
 
@@ -17,6 +17,7 @@ struct HomeView: View {
     ]
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 VStack(spacing: 0) {
@@ -31,12 +32,12 @@ struct HomeView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.system(size: 50))
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
                             Text("Error loading analysis results")
                                 .font(.headline)
                             Text(error)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                             Button("Try Again") {
                                 Task {
@@ -52,16 +53,22 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if viewModel.filteredResults.isEmpty {
                         VStack(spacing: 16) {
-                            Image(systemName: viewModel.searchText.isEmpty ? "photo.on.rectangle.angled" : "magnifyingglass")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            Text(viewModel.searchText.isEmpty ? "No images yet" : "No matching images")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
+                            Image(
+                                systemName: viewModel.searchText.isEmpty
+                                    ? "photo.on.rectangle.angled" : "magnifyingglass"
+                            )
+                            .font(.system(size: 50))
+                            .foregroundStyle(.gray)
+                            Text(
+                                viewModel.searchText.isEmpty
+                                    ? "No images yet" : "No matching images"
+                            )
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
                             if viewModel.searchText.isEmpty {
                                 Text("Tap the + button to upload your first image")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
                         }
@@ -71,8 +78,10 @@ struct HomeView: View {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 2) {
                                 ForEach(viewModel.filteredResults) { result in
-                                    NavigationLink(destination: ImageDetailDestination(analysisResult: result, viewModel: viewModel)) {
-                                        ImageGridCell(analysisResult: result, viewModel: viewModel)
+                                    NavigationLink(
+                                        destination: ImageDetailDestination(analysisResult: result)
+                                    ) {
+                                        ImageGridCell(analysisResult: result)
                                     }
                                 }
                             }
@@ -94,7 +103,7 @@ struct HomeView: View {
                 .padding(.bottom, 20)
             }
             .sheet(isPresented: $showUploadSheet) {
-                ImageUploadView(viewModel: viewModel)
+                ImageUploadView()
             }
         }
     }
@@ -108,7 +117,7 @@ struct SearchBar: View {
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.gray)
+                .foregroundStyle(.gray)
 
             TextField("Search images...", text: $text)
                 .textFieldStyle(PlainTextFieldStyle())
@@ -116,13 +125,14 @@ struct SearchBar: View {
             if !text.isEmpty {
                 Button(action: { text = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.gray)
                 }
             }
         }
         .padding(8)
+        .padding(8)
         .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -130,7 +140,7 @@ struct SearchBar: View {
 
 struct ImageGridCell: View {
     let analysisResult: ImageAnalysisResult
-    @ObservedObject var viewModel: ImageGridViewModel
+    @Environment(ImageGridViewModel.self) private var viewModel
     @State private var loadedImage: UIImage?
 
     var body: some View {
@@ -154,12 +164,13 @@ struct ImageGridCell: View {
             if analysisResult.status == .processing {
                 Text("Processing")
                     .font(.caption2)
+                    .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(Color.orange.opacity(0.9))
-                    .cornerRadius(4)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
                     .padding(.bottom, 4)
             }
         }
@@ -173,7 +184,7 @@ struct ImageGridCell: View {
 
 struct ImageDetailDestination: View {
     let analysisResult: ImageAnalysisResult
-    @ObservedObject var viewModel: ImageGridViewModel
+    @Environment(ImageGridViewModel.self) private var viewModel
     @State private var loadedImage: UIImage?
 
     var body: some View {
@@ -205,7 +216,7 @@ struct FloatingActionButton: View {
 
                 Image(systemName: "plus")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
         }
     }
@@ -213,4 +224,5 @@ struct FloatingActionButton: View {
 
 #Preview {
     HomeView()
+        .environment(ImageGridViewModel())
 }

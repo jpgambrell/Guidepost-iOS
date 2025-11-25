@@ -90,7 +90,9 @@ struct ImageDetailView: View {
                 analysisResult: analysisResult,
                 onRefresh: { await fetchLatestAnalysis() }
             )
-            .presentationDetents([.height(60), .height(200), .large], selection: .constant(.height(200)))
+            .presentationDetents(
+                [.height(60), .height(200), .large], selection: .constant(.height(200))
+            )
             .presentationBackgroundInteraction(.enabled)
             .presentationBackground(.thinMaterial)
             .presentationCornerRadius(16)
@@ -108,7 +110,8 @@ struct ImageDetailView: View {
         defer { isRefreshing = false }
 
         do {
-            let updatedResult = try await ImageAPIService.shared.fetchAnalysis(imageId: analysisResult.imageId)
+            let updatedResult = try await ImageAPIService.shared.fetchAnalysis(
+                imageId: analysisResult.imageId)
             analysisResult = updatedResult
         } catch {
             print("Failed to fetch latest analysis: \(error)")
@@ -128,11 +131,14 @@ struct MetadataSheetView: View {
                 // Analysis Status
                 if analysisResult.status != .completed {
                     HStack {
-                        Image(systemName: analysisResult.status == .failed ? "exclamationmark.triangle.fill" : "clock.fill")
-                            .foregroundColor(analysisResult.status == .failed ? .red : .orange)
+                        Image(
+                            systemName: analysisResult.status == .failed
+                                ? "exclamationmark.triangle.fill" : "clock.fill"
+                        )
+                        .foregroundStyle(analysisResult.status == .failed ? .red : .orange)
                         Text(analysisResult.status.rawValue.capitalized)
                             .font(.headline)
-                            .foregroundColor(analysisResult.status == .failed ? .red : .orange)
+                            .foregroundStyle(analysisResult.status == .failed ? .red : .orange)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
@@ -140,7 +146,7 @@ struct MetadataSheetView: View {
                         (analysisResult.status == .failed ? Color.red : Color.orange)
                             .opacity(0.1)
                     )
-                    .cornerRadius(8)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
                     if let error = analysisResult.error {
                         MetadataRow(title: "Error", value: error)
@@ -164,8 +170,8 @@ struct MetadataSheetView: View {
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
                                     .background(Color.blue.opacity(0.2))
-                                    .foregroundColor(.blue)
-                                    .cornerRadius(16)
+                                    .foregroundStyle(.blue)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
                             }
                         }
                     }
@@ -189,7 +195,7 @@ struct MetadataRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(value)
                 .font(.body)
         }
@@ -202,14 +208,21 @@ struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(in: proposal.replacingUnspecifiedDimensions().width, subviews: subviews, spacing: spacing)
+        let result = FlowResult(
+            in: proposal.replacingUnspecifiedDimensions().width, subviews: subviews,
+            spacing: spacing)
         return result.size
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) {
         let result = FlowResult(in: bounds.width, subviews: subviews, spacing: spacing)
         for (index, subview) in subviews.enumerated() {
-            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x, y: bounds.minY + result.positions[index].y), proposal: .unspecified)
+            subview.place(
+                at: CGPoint(
+                    x: bounds.minX + result.positions[index].x,
+                    y: bounds.minY + result.positions[index].y), proposal: .unspecified)
         }
     }
 
