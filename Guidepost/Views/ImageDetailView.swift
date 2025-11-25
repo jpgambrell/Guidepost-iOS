@@ -25,7 +25,7 @@ struct ImageDetailView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color.black
+            Color.white
                 .ignoresSafeArea()
 
             // Image layer - aligned to top
@@ -139,6 +139,11 @@ struct MetadataSheetView: View {
                         Text(analysisResult.status.rawValue.capitalized)
                             .font(.headline)
                             .foregroundStyle(analysisResult.status == .failed ? .red : .orange)
+                        Button("Refresh") {
+                            Task {
+                                await onRefresh()
+                            }
+                        }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
@@ -179,9 +184,7 @@ struct MetadataSheetView: View {
             }
             .padding()
         }
-        .refreshable {
-            await onRefresh()
-        }
+       
     }
 }
 
