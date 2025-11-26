@@ -55,9 +55,17 @@ struct ImageUploadView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.blue)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.blue.opacity(0.6))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
 
                     Button(action: { showPhotoPicker = true }) {
@@ -67,9 +75,17 @@ struct ImageUploadView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.blue)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.blue.opacity(0.6))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
 
                     if selectedImage != nil {
@@ -85,9 +101,17 @@ struct ImageUploadView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(isUploading ? Color.gray : Color.green)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(isUploading ? Color.gray.opacity(0.6) : Color.green.opacity(0.6))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
                             .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .shadow(color: isUploading ? Color.clear : .green.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
                         .disabled(isUploading)
                     }

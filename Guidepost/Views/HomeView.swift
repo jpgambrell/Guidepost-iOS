@@ -19,12 +19,8 @@ struct HomeView: View {
     var body: some View {
         @Bindable var viewModel = viewModel
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
+            ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {
-                    SearchBar(text: $viewModel.searchText)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-
                     if viewModel.analysisResults.isEmpty && viewModel.errorMessage == nil {
                         ProgressView("Loading images...")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -93,13 +89,16 @@ struct HomeView: View {
                         }
                     }
                 }
-                .navigationTitle("Guidepost")
-                .navigationBarTitleDisplayMode(.large)
 
-                FloatingActionButton(action: {
-                    showUploadSheet = true
-                })
-                .padding(.trailing, 20)
+                // Bottom Bar with SearchBar and FAB
+                HStack(spacing: 12) {
+                    SearchBar(text: $viewModel.searchText)
+
+                    FloatingActionButton(action: {
+                        showUploadSheet = true
+                    })
+                }
+                .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
             .sheet(isPresented: $showUploadSheet) {
@@ -115,24 +114,72 @@ struct SearchBar: View {
     @Binding var text: String
 
     var body: some View {
-        HStack {
+        HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.gray)
+                .foregroundStyle(.white.opacity(0.8))
+                .font(.system(size: 16, weight: .medium))
 
             TextField("Search images...", text: $text)
                 .textFieldStyle(PlainTextFieldStyle())
+                .foregroundStyle(.white)
 
             if !text.isEmpty {
                 Button(action: { text = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .font(.system(size: 16))
                 }
             }
         }
-        .padding(8)
-        .padding(8)
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            ZStack {
+                // Outer glow
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .blur(radius: 10)
+
+                // Glass layer
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.15),
+                                        Color.white.opacity(0.05)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.5),
+                                        Color.white.opacity(0.1)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.5
+                            )
+                    )
+            }
+        )
+        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+        .shadow(color: .blue.opacity(0.2), radius: 15, x: 0, y: 8)
     }
 }
 
@@ -154,7 +201,7 @@ struct ImageGridCell: View {
             } else {
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
-                    .frame(width: 100, height: 100)
+                    .frame(width: 125, height: 125)
                     .overlay {
                         ProgressView()
                     }
@@ -164,14 +211,21 @@ struct ImageGridCell: View {
             if analysisResult.status == .processing {
                 Text("Processing")
                     .font(.caption2)
-                    .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color.orange.opacity(0.9))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .padding(.bottom, 4)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.orange.opacity(0.6))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+                    .shadow(color: .orange.opacity(0.4), radius: 4, x: 0, y: 2)
+                    .padding(.bottom, 6)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -210,15 +264,46 @@ struct FloatingActionButton: View {
     var body: some View {
         Button(action: action) {
             ZStack {
+                // Outer glow
                 Circle()
-                    .fill(Color.blue)
-                    .frame(width: 60, height: 60)
-                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 3)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.8), Color.blue.opacity(0.5)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 50, height: 50)
+                    .blur(radius: 5)
+
+                // Glass circle
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.6), Color.white.opacity(0.2)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.5
+                            )
+                    )
+                    .background(
+                        Circle()
+                            .fill(Color.blue.opacity(0.4))
+                            .frame(width: 50, height: 50)
+                    )
 
                 Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
             }
+            .shadow(color: .blue.opacity(0.4), radius: 12, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
         }
     }
 }
