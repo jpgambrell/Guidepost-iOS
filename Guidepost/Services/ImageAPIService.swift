@@ -15,6 +15,7 @@ enum APIError: Error, LocalizedError {
     case decodingError(Error)
     case networkError(Error)
     case noData
+    case unauthorized
 
     var errorDescription: String? {
         switch self {
@@ -30,6 +31,8 @@ enum APIError: Error, LocalizedError {
             return "Network error: \(error.localizedDescription)"
         case .noData:
             return "No data received"
+        case .unauthorized:
+            return "Unauthorized - please sign in again"
         }
     }
 }
@@ -40,12 +43,27 @@ class ImageAPIService {
     private let uploadServiceURL = "https://0p19v2252j.execute-api.us-east-1.amazonaws.com/prod"
     private let analysisServiceURL = "https://0p19v2252j.execute-api.us-east-1.amazonaws.com/prod"
     private let session: URLSession
+    private let authService = AuthService.shared
 
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 300
         self.session = URLSession(configuration: config)
+    }
+    
+    // MARK: - Authorization Helper
+    
+    private func addAuthorizationHeader(to request: inout URLRequest) async throws {
+        let token = try await authService.ensureValidToken()
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+    
+    private func handleUnauthorizedIfNeeded(statusCode: Int) throws {
+        if statusCode == 401 {
+            authService.clearTokens()
+            throw APIError.unauthorized
+        }
     }
 
     // MARK: - Upload Image
@@ -63,6 +81,9 @@ class ImageAPIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        // Add authorization header
+        try await addAuthorizationHeader(to: &request)
 
         var body = Data()
 
@@ -82,6 +103,8 @@ class ImageAPIService {
                 throw APIError.invalidResponse
             }
 
+            try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
+            
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw APIError.httpError(statusCode: httpResponse.statusCode)
             }
@@ -108,6 +131,9 @@ class ImageAPIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        
+        // Add authorization header
+        try await addAuthorizationHeader(to: &request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -116,6 +142,8 @@ class ImageAPIService {
                 throw APIError.invalidResponse
             }
 
+            try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
+            
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw APIError.httpError(statusCode: httpResponse.statusCode)
             }
@@ -142,6 +170,9 @@ class ImageAPIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        
+        // Add authorization header
+        try await addAuthorizationHeader(to: &request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -150,6 +181,8 @@ class ImageAPIService {
                 throw APIError.invalidResponse
             }
 
+            try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
+            
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw APIError.httpError(statusCode: httpResponse.statusCode)
             }
@@ -176,6 +209,9 @@ class ImageAPIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        
+        // Add authorization header
+        try await addAuthorizationHeader(to: &request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -184,6 +220,8 @@ class ImageAPIService {
                 throw APIError.invalidResponse
             }
 
+            try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
+            
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw APIError.httpError(statusCode: httpResponse.statusCode)
             }

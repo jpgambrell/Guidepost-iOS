@@ -9,12 +9,14 @@ import SwiftUI
 
 @main
 struct GuidepostApp: App {
-    @State private var viewModel = ImageGridViewModel()
+    @State private var authViewModel = AuthViewModel()
+    @State private var imageGridViewModel = ImageGridViewModel()
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
-                .environment(viewModel)
+            ContentView()
+                .environment(authViewModel)
+                .environment(imageGridViewModel)
         }
     }
 }

@@ -32,6 +32,7 @@ struct APIResponse<T: Codable>: Codable {
 
 struct UploadedImage: Codable, Identifiable {
     let id: String
+    let userId: String
     let filename: String
     let originalName: String
     let mimetype: String
@@ -41,6 +42,7 @@ struct UploadedImage: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id
+        case userId
         case filename
         case originalName
         case mimetype
@@ -52,6 +54,7 @@ struct UploadedImage: Codable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
+        userId = try container.decode(String.self, forKey: .userId)
         filename = try container.decode(String.self, forKey: .filename)
         originalName = try container.decode(String.self, forKey: .originalName)
         mimetype = try container.decode(String.self, forKey: .mimetype)
@@ -111,6 +114,7 @@ struct UploadResponse: Codable {
 
 struct ImageAnalysisResult: Codable, Identifiable {
     let imageId: String
+    let userId: String
     let filename: String
     let analyzedAt: String
     let keywords: [String]?
@@ -121,6 +125,7 @@ struct ImageAnalysisResult: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case imageId
+        case userId
         case filename
         case analyzedAt
         case keywords
@@ -133,6 +138,7 @@ struct ImageAnalysisResult: Codable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         imageId = try container.decode(String.self, forKey: .imageId)
+        userId = try container.decode(String.self, forKey: .userId)
         filename = try container.decode(String.self, forKey: .filename)
         analyzedAt = try container.decode(String.self, forKey: .analyzedAt)
         keywords = try container.decodeIfPresent([String].self, forKey: .keywords)

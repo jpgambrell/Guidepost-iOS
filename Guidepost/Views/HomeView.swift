@@ -9,7 +9,9 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(ImageGridViewModel.self) private var viewModel
+    @Environment(AuthViewModel.self) private var authViewModel
     @State private var showUploadSheet = false
+    @State private var showProfileSheet = false
     @State private var isRefreshing = false
 
     let columns = [
@@ -101,8 +103,183 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
+            .navigationTitle("Guidepost")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showProfileSheet = true }) {
+                        ProfileButton(user: authViewModel.currentUser)
+                    }
+                }
+            }
             .sheet(isPresented: $showUploadSheet) {
                 ImageUploadView()
+            }
+            .sheet(isPresented: $showProfileSheet) {
+                ProfileSheetView()
+            }
+        }
+    }
+}
+
+// MARK: - Profile Button
+
+struct ProfileButton: View {
+    let user: User?
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [.cyan, .blue],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 36, height: 36)
+            
+            if let user = user {
+                Text(user.givenName.prefix(1).uppercased())
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            } else {
+                Image(systemName: "person.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+}
+
+// MARK: - Profile Sheet View
+
+struct ProfileSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var authViewModel
+    @State private var showLogoutConfirmation = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Profile header
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.cyan, .blue],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 80, height: 80)
+                            .shadow(color: .cyan.opacity(0.4), radius: 10)
+                        
+                        if let user = authViewModel.currentUser {
+                            Text(user.givenName.prefix(1).uppercased() + user.familyName.prefix(1).uppercased())
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                        } else {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 30))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    
+                    if let user = authViewModel.currentUser {
+                        VStack(spacing: 4) {
+                            Text(user.fullName)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Text(user.email)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            
+                            if user.role == .admin {
+                                Text("Administrator")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.purple)
+                                    )
+                                    .padding(.top, 4)
+                            }
+                        }
+                    } else {
+                        Text("Loading profile...")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 20)
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Account section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Account")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                    
+                    Button(action: { showLogoutConfirmation = true }) {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.system(size: 18))
+                                .frame(width: 28)
+                            
+                            Text("Sign Out")
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                        }
+                        .foregroundStyle(.red)
+                        .padding()
+                        .background(Color.red.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal)
+                }
+                
+                Spacer()
+                
+                // App version
+                Text("Guidepost v1.0.0")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom)
+            }
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Sign Out",
+                isPresented: $showLogoutConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Sign Out", role: .destructive) {
+                    authViewModel.signOut()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to sign out?")
             }
         }
     }
@@ -311,4 +488,5 @@ struct FloatingActionButton: View {
 #Preview {
     HomeView()
         .environment(ImageGridViewModel())
+        .environment(AuthViewModel())
 }
