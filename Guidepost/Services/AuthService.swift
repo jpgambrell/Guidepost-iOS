@@ -89,12 +89,16 @@ class AuthService {
         KeychainHelper.loadString(forKey: KeychainKey.accessToken.rawValue)
     }
     
+    var currentIdToken: String? {
+        KeychainHelper.loadString(forKey: KeychainKey.idToken.rawValue)
+    }
+    
     var currentRefreshToken: String? {
         KeychainHelper.loadString(forKey: KeychainKey.refreshToken.rawValue)
     }
     
     var isAuthenticated: Bool {
-        currentAccessToken != nil
+        currentIdToken != nil
     }
     
     var isTokenExpired: Bool {
@@ -201,13 +205,14 @@ class AuthService {
         return user
     }
     
-    /// Ensure we have a valid access token, refreshing if needed
+    /// Ensure we have a valid ID token, refreshing if needed
+    /// Note: API Gateway Cognito authorizers require ID token, not access token
     func ensureValidToken() async throws -> String {
         if isTokenExpired {
             _ = try await refreshAccessToken()
         }
         
-        guard let token = currentAccessToken else {
+        guard let token = currentIdToken else {
             throw AuthError.notAuthenticated
         }
         
@@ -240,7 +245,8 @@ class AuthService {
         request.httpMethod = "GET"
         
         if authenticated {
-            guard let token = currentAccessToken else {
+            // API Gateway Cognito authorizers require ID token, not access token
+            guard let token = currentIdToken else {
                 throw AuthError.notAuthenticated
             }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -251,11 +257,29 @@ class AuthService {
     
     private func performRequest<R: Codable>(_ request: URLRequest) async throws -> R {
         do {
+            // Debug: Print request details
+            #if DEBUG
+            print("🌐 Request URL: \(request.url?.absoluteString ?? "nil")")
+            print("🌐 Request Method: \(request.httpMethod ?? "nil")")
+            print("🌐 Request Headers: \(request.allHTTPHeaderFields ?? [:])")
+            if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+                print("🌐 Request Body: \(bodyString)")
+            }
+            #endif
+            
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw AuthError.invalidResponse
             }
+            
+            // Debug: Print response details
+            #if DEBUG
+            print("🌐 Response Status: \(httpResponse.statusCode)")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("🌐 Response Body: \(responseString)")
+            }
+            #endif
             
             // Try to decode error response for non-success status codes
             if !(200...299).contains(httpResponse.statusCode) {
@@ -270,8 +294,14 @@ class AuthService {
         } catch let error as AuthError {
             throw error
         } catch let error as DecodingError {
+            #if DEBUG
+            print("🌐 Decoding Error: \(error)")
+            #endif
             throw AuthError.decodingError(error)
         } catch {
+            #if DEBUG
+            print("🌐 Network Error: \(error)")
+            #endif
             throw AuthError.networkError(error)
         }
     }

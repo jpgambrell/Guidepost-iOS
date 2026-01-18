@@ -65,6 +65,39 @@ class ImageAPIService {
             throw APIError.unauthorized
         }
     }
+    
+    // MARK: - Debug Logging
+    
+    private func logRequest(_ request: URLRequest) {
+        #if DEBUG
+        print("📷 Request URL: \(request.url?.absoluteString ?? "nil")")
+        print("📷 Request Method: \(request.httpMethod ?? "nil")")
+        // Don't log full Authorization header for security, just indicate presence
+        if let headers = request.allHTTPHeaderFields {
+            var safeHeaders = headers
+            if safeHeaders["Authorization"] != nil {
+                safeHeaders["Authorization"] = "Bearer [REDACTED]"
+            }
+            print("📷 Request Headers: \(safeHeaders)")
+        }
+        if let body = request.httpBody, body.count < 1000, let bodyString = String(data: body, encoding: .utf8) {
+            print("📷 Request Body: \(bodyString)")
+        } else if let body = request.httpBody {
+            print("📷 Request Body: [\(body.count) bytes]")
+        }
+        #endif
+    }
+    
+    private func logResponse(_ response: HTTPURLResponse, data: Data) {
+        #if DEBUG
+        print("📷 Response Status: \(response.statusCode)")
+        if data.count < 2000, let responseString = String(data: data, encoding: .utf8) {
+            print("📷 Response Body: \(responseString)")
+        } else {
+            print("📷 Response Body: [\(data.count) bytes]")
+        }
+        #endif
+    }
 
     // MARK: - Upload Image
 
@@ -95,6 +128,8 @@ class ImageAPIService {
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         request.httpBody = body
+        
+        logRequest(request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -102,6 +137,8 @@ class ImageAPIService {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
             }
+            
+            logResponse(httpResponse, data: data)
 
             try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
             
@@ -116,8 +153,14 @@ class ImageAPIService {
         } catch let error as APIError {
             throw error
         } catch let error as DecodingError {
+            #if DEBUG
+            print("📷 Decoding Error: \(error)")
+            #endif
             throw APIError.decodingError(error)
         } catch {
+            #if DEBUG
+            print("📷 Network Error: \(error)")
+            #endif
             throw APIError.networkError(error)
         }
     }
@@ -134,6 +177,8 @@ class ImageAPIService {
         
         // Add authorization header
         try await addAuthorizationHeader(to: &request)
+        
+        logRequest(request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -141,6 +186,8 @@ class ImageAPIService {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
             }
+            
+            logResponse(httpResponse, data: data)
 
             try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
             
@@ -155,8 +202,14 @@ class ImageAPIService {
         } catch let error as APIError {
             throw error
         } catch let error as DecodingError {
+            #if DEBUG
+            print("📷 Decoding Error: \(error)")
+            #endif
             throw APIError.decodingError(error)
         } catch {
+            #if DEBUG
+            print("📷 Network Error: \(error)")
+            #endif
             throw APIError.networkError(error)
         }
     }
@@ -173,6 +226,8 @@ class ImageAPIService {
         
         // Add authorization header
         try await addAuthorizationHeader(to: &request)
+        
+        logRequest(request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -180,6 +235,8 @@ class ImageAPIService {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
             }
+            
+            logResponse(httpResponse, data: data)
 
             try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
             
@@ -194,8 +251,14 @@ class ImageAPIService {
         } catch let error as APIError {
             throw error
         } catch let error as DecodingError {
+            #if DEBUG
+            print("📷 Decoding Error: \(error)")
+            #endif
             throw APIError.decodingError(error)
         } catch {
+            #if DEBUG
+            print("📷 Network Error: \(error)")
+            #endif
             throw APIError.networkError(error)
         }
     }
@@ -212,6 +275,8 @@ class ImageAPIService {
         
         // Add authorization header
         try await addAuthorizationHeader(to: &request)
+        
+        logRequest(request)
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -219,6 +284,11 @@ class ImageAPIService {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
             }
+            
+            #if DEBUG
+            print("📷 Response Status: \(httpResponse.statusCode)")
+            print("📷 Response Body: [Image data - \(data.count) bytes]")
+            #endif
 
             try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
             
@@ -230,6 +300,9 @@ class ImageAPIService {
         } catch let error as APIError {
             throw error
         } catch {
+            #if DEBUG
+            print("📷 Network Error: \(error)")
+            #endif
             throw APIError.networkError(error)
         }
     }

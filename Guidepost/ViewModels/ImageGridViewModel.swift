@@ -15,6 +15,7 @@ class ImageGridViewModel {
     var imageCache: [String: UIImage] = [:]
     var errorMessage: String?
     var searchText = ""
+    var isLoading: Bool = true
 
     private let apiService = ImageAPIService.shared
     private var loadTask: Task<Void, Never>?
@@ -42,16 +43,19 @@ class ImageGridViewModel {
         loadTask?.cancel()
 
         errorMessage = nil
+        isLoading = true
 
         loadTask = Task {
             do {
                 let results = try await apiService.fetchAllAnalysis()
                 if !Task.isCancelled {
                     analysisResults = results
+                    isLoading = false
                 }
             } catch {
                 if !Task.isCancelled {
                     errorMessage = error.localizedDescription
+                    isLoading = false
                 }
             }
         }

@@ -98,13 +98,25 @@ class AuthViewModel {
         
         do {
             _ = try await authService.signIn(email: email, password: password)
-            let user = try await authService.getMe()
             
+            // Sign-in succeeded - user is authenticated
             await MainActor.run {
-                self.currentUser = user
                 self.isAuthenticated = true
                 self.clearFormFields()
                 self.isLoading = false
+            }
+            
+            // Try to fetch user profile (non-blocking - if it fails, user is still authenticated)
+            do {
+                let user = try await authService.getMe()
+                await MainActor.run {
+                    self.currentUser = user
+                }
+            } catch {
+                #if DEBUG
+                print("⚠️ Failed to fetch user profile: \(error.localizedDescription)")
+                #endif
+                // User is still authenticated, just without profile info
             }
         } catch let error as AuthError {
             await MainActor.run {

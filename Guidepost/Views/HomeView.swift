@@ -23,7 +23,7 @@ struct HomeView: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {
-                    if viewModel.analysisResults.isEmpty && viewModel.errorMessage == nil {
+                    if viewModel.isLoading {
                         ProgressView("Loading images...")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if let error = viewModel.errorMessage {
@@ -50,28 +50,41 @@ struct HomeView: View {
                         .padding()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if viewModel.filteredResults.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(
-                                systemName: viewModel.searchText.isEmpty
-                                    ? "photo.on.rectangle.angled" : "magnifyingglass"
-                            )
-                            .font(.system(size: 50))
-                            .foregroundStyle(.gray)
-                            Text(
-                                viewModel.searchText.isEmpty
-                                    ? "No images yet" : "No matching images"
-                            )
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                            if viewModel.searchText.isEmpty {
-                                Text("Tap the + button to upload your first image")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                Spacer()
+                                    .frame(height: 100)
+                                Image(
+                                    systemName: viewModel.searchText.isEmpty
+                                        ? "photo.on.rectangle.angled" : "magnifyingglass"
+                                )
+                                .font(.system(size: 50))
+                                .foregroundStyle(.gray)
+                                Text(
+                                    viewModel.searchText.isEmpty
+                                        ? "No images yet" : "No matching images"
+                                )
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                                if viewModel.searchText.isEmpty {
+                                    Text("Tap the + button to upload your first image")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.center)
+                                    Text("Pull down to refresh")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.top, 8)
+                                }
                             }
+                            .padding()
+                            .frame(maxWidth: .infinity)
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .refreshable {
+                            isRefreshing = true
+                            await viewModel.loadAnalysisResults()
+                            isRefreshing = false
+                        }
                     } else {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 8) {
@@ -112,7 +125,12 @@ struct HomeView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showUploadSheet) {
+            .sheet(isPresented: $showUploadSheet, onDismiss: {
+                // Refresh analysis results when upload sheet is dismissed
+                Task {
+                    await viewModel.loadAnalysisResults()
+                }
+            }) {
                 ImageUploadView()
             }
             .sheet(isPresented: $showProfileSheet) {
