@@ -25,7 +25,7 @@ struct ImageDetailView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Color.white
+            Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
             // Image layer - aligned to top

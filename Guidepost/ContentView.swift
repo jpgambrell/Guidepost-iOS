@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(AppearanceManager.self) private var appearanceManager
     
     var body: some View {
         Group {
@@ -19,6 +20,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: authViewModel.isAuthenticated)
+        .preferredColorScheme(appearanceManager.colorScheme)
     }
 }
 

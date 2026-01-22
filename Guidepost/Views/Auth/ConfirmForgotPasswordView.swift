@@ -21,16 +21,7 @@ struct ConfirmForgotPasswordView: View {
         
         ZStack {
             // Background gradient
-            LinearGradient(
-                colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.15),
-                    Color(red: 0.1, green: 0.1, blue: 0.25),
-                    Color(red: 0.05, green: 0.1, blue: 0.2)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AdaptiveBackground()
             
             ScrollView {
                 VStack(spacing: 32) {
@@ -40,9 +31,9 @@ struct ConfirmForgotPasswordView: View {
                             Button(action: { authViewModel.navigateToSignIn() }) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 20, weight: .semibold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Color.theme.textPrimary)
                                     .padding(12)
-                                    .background(.white.opacity(0.1))
+                                    .background(Color.theme.inputBackground)
                                     .clipShape(Circle())
                             }
                             Spacer()
@@ -63,16 +54,16 @@ struct ConfirmForgotPasswordView: View {
                         
                         Text("Reset Password")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.theme.textPrimary)
                         
                         Text("Enter the code sent to")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(Color.theme.textSecondary)
                         
                         Text(email)
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.cyan)
+                            .foregroundStyle(Color.theme.accent)
                     }
                     .padding(.top, 20)
                     
@@ -121,7 +112,7 @@ struct ConfirmForgotPasswordView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Password must contain:")
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.5))
+                                .foregroundStyle(Color.theme.textSecondary)
                             HStack(spacing: 16) {
                                 PasswordRequirement(text: "8+ chars", met: authViewModel.newPassword.count >= 8)
                                 PasswordRequirement(text: "Uppercase", met: authViewModel.newPassword.contains(where: { $0.isUppercase }))
@@ -172,7 +163,7 @@ struct ConfirmForgotPasswordView: View {
                         }
                         .font(.callout)
                         .fontWeight(.medium)
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(Color.theme.accent)
                     }
                     .padding(.bottom, 30)
                 }

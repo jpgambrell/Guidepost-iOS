@@ -21,16 +21,7 @@ struct SignInView: View {
         NavigationStack {
             ZStack {
                 // Background gradient
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.05, green: 0.05, blue: 0.15),
-                        Color(red: 0.1, green: 0.1, blue: 0.25),
-                        Color(red: 0.05, green: 0.1, blue: 0.2)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AdaptiveBackground()
                 
                 ScrollView {
                     VStack(spacing: 32) {
@@ -52,11 +43,11 @@ struct SignInView: View {
                             
                             Text("Guidepost")
                                 .font(.system(size: 36, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.theme.textPrimary)
                             
                             Text("AI-Powered Image Analysis")
                                 .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.7))
+                                .foregroundStyle(Color.theme.textSecondary)
                         }
                         .padding(.bottom, 20)
                         
@@ -122,7 +113,7 @@ struct SignInView: View {
                                 Button(action: { authViewModel.navigateToForgotPassword() }) {
                                     Text("Forgot Password?")
                                         .font(.callout)
-                                        .foregroundStyle(.cyan)
+                                        .foregroundStyle(Color.theme.accent)
                                 }
                             }
                             
@@ -141,13 +132,7 @@ struct SignInView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(
-                                    LinearGradient(
-                                        colors: [.cyan, .blue],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                                .background(Color.theme.accentGradient())
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                                 .shadow(color: .cyan.opacity(0.4), radius: 15, x: 0, y: 8)
@@ -162,11 +147,11 @@ struct SignInView: View {
                         // Sign up link
                         HStack(spacing: 4) {
                             Text("Don't have an account?")
-                                .foregroundStyle(.white.opacity(0.7))
+                                .foregroundStyle(Color.theme.textSecondary)
                             Button(action: { authViewModel.navigateToSignUp() }) {
                                 Text("Sign Up")
                                     .fontWeight(.semibold)
-                                    .foregroundStyle(.cyan)
+                                    .foregroundStyle(Color.theme.accent)
                             }
                         }
                         .font(.callout)
@@ -194,7 +179,7 @@ struct AuthTextField: View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(Color.theme.textSecondary)
                 .frame(width: 24)
             
             TextField(placeholder, text: $text)
@@ -202,16 +187,16 @@ struct AuthTextField: View {
                 .autocorrectionDisabled()
                 .keyboardType(keyboardType)
                 .textContentType(textContentType)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.theme.textPrimary)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(.white.opacity(0.08))
+                .fill(Color.theme.inputBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(.white.opacity(0.15), lineWidth: 1)
+                        .stroke(Color.theme.inputBorder, lineWidth: 1)
                 )
         )
     }
@@ -229,7 +214,7 @@ struct AuthSecureField: View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(Color.theme.textSecondary)
                 .frame(width: 24)
             
             Group {
@@ -242,22 +227,22 @@ struct AuthSecureField: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .textContentType(.password)
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.theme.textPrimary)
             
             Button(action: { isSecure.toggle() }) {
                 Image(systemName: isSecure ? "eye.fill" : "eye.slash.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(Color.theme.textSecondary)
             }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(.white.opacity(0.08))
+                .fill(Color.theme.inputBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(.white.opacity(0.15), lineWidth: 1)
+                        .stroke(Color.theme.inputBorder, lineWidth: 1)
                 )
         )
     }

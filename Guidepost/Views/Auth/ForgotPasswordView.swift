@@ -15,16 +15,7 @@ struct ForgotPasswordView: View {
         
         ZStack {
             // Background gradient
-            LinearGradient(
-                colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.15),
-                    Color(red: 0.1, green: 0.1, blue: 0.25),
-                    Color(red: 0.05, green: 0.1, blue: 0.2)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AdaptiveBackground()
             
             ScrollView {
                 VStack(spacing: 32) {
@@ -34,9 +25,9 @@ struct ForgotPasswordView: View {
                             Button(action: { authViewModel.navigateToSignIn() }) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 20, weight: .semibold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Color.theme.textPrimary)
                                     .padding(12)
-                                    .background(.white.opacity(0.1))
+                                    .background(Color.theme.inputBackground)
                                     .clipShape(Circle())
                             }
                             Spacer()
@@ -57,11 +48,11 @@ struct ForgotPasswordView: View {
                         
                         Text("Forgot Password")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.theme.textPrimary)
                         
                         Text("Enter your email and we'll send you a code to reset your password")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(Color.theme.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
                     }
@@ -134,7 +125,7 @@ struct ForgotPasswordView: View {
                         }
                         .font(.callout)
                         .fontWeight(.medium)
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(Color.theme.accent)
                     }
                     .padding(.bottom, 30)
                 }

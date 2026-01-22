@@ -20,16 +20,7 @@ struct SignUpView: View {
         
         ZStack {
             // Background gradient
-            LinearGradient(
-                colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.15),
-                    Color(red: 0.1, green: 0.1, blue: 0.25),
-                    Color(red: 0.05, green: 0.1, blue: 0.2)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AdaptiveBackground()
             
             ScrollView {
                 VStack(spacing: 28) {
@@ -39,9 +30,9 @@ struct SignUpView: View {
                             Button(action: { authViewModel.navigateToSignIn() }) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 20, weight: .semibold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Color.theme.textPrimary)
                                     .padding(12)
-                                    .background(.white.opacity(0.1))
+                                    .background(Color.theme.inputBackground)
                                     .clipShape(Circle())
                             }
                             Spacer()
@@ -50,11 +41,11 @@ struct SignUpView: View {
                         
                         Text("Create Account")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.theme.textPrimary)
                         
                         Text("Sign up to get started")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(Color.theme.textSecondary)
                     }
                     .padding(.top, 20)
                     
@@ -139,7 +130,7 @@ struct SignUpView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Password must contain:")
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.5))
+                                .foregroundStyle(Color.theme.textSecondary)
                             HStack(spacing: 16) {
                                 PasswordRequirement(text: "8+ chars", met: authViewModel.password.count >= 8)
                                 PasswordRequirement(text: "Uppercase", met: authViewModel.password.contains(where: { $0.isUppercase }))
@@ -188,13 +179,7 @@ struct SignUpView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(
-                                LinearGradient(
-                                    colors: [.cyan, .blue],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
+                            .background(Color.theme.accentGradient())
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                             .shadow(color: .cyan.opacity(0.4), radius: 15, x: 0, y: 8)
@@ -209,11 +194,11 @@ struct SignUpView: View {
                     // Sign in link
                     HStack(spacing: 4) {
                         Text("Already have an account?")
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(Color.theme.textSecondary)
                         Button(action: { authViewModel.navigateToSignIn() }) {
                             Text("Sign In")
                                 .fontWeight(.semibold)
-                                .foregroundStyle(.cyan)
+                                .foregroundStyle(Color.theme.accent)
                         }
                     }
                     .font(.callout)
@@ -240,7 +225,7 @@ struct PasswordRequirement: View {
             Text(text)
                 .font(.caption2)
         }
-        .foregroundStyle(met ? .green : .white.opacity(0.4))
+        .foregroundStyle(met ? .green : Color.theme.textSecondary.opacity(0.6))
     }
 }
 

@@ -175,9 +175,12 @@ struct ProfileButton: View {
 struct ProfileSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(AppearanceManager.self) private var appearanceManager
     @State private var showLogoutConfirmation = false
     
     var body: some View {
+        @Bindable var appearanceManager = appearanceManager
+        
         NavigationStack {
             VStack(spacing: 24) {
                 // Profile header
@@ -235,6 +238,50 @@ struct ProfileSheetView: View {
                     }
                 }
                 .padding(.top, 20)
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Appearance section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Appearance")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                    
+                    VStack(spacing: 8) {
+                        ForEach(AppearanceMode.allCases) { mode in
+                            Button(action: {
+                                appearanceManager.selectedAppearance = mode
+                            }) {
+                                HStack {
+                                    Image(systemName: mode.iconName)
+                                        .font(.system(size: 18))
+                                        .frame(width: 28)
+                                        .foregroundStyle(appearanceManager.selectedAppearance == mode ? Color.theme.accent : .secondary)
+                                    
+                                    Text(mode.displayName)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.primary)
+                                    
+                                    Spacer()
+                                    
+                                    if appearanceManager.selectedAppearance == mode {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(Color.theme.accent)
+                                    }
+                                }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(appearanceManager.selectedAppearance == mode ? Color.theme.accent.opacity(0.1) : Color.secondary.opacity(0.1))
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
                 
                 Divider()
                     .padding(.horizontal)
@@ -307,21 +354,22 @@ struct ProfileSheetView: View {
 
 struct SearchBar: View {
     @Binding var text: String
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(Color.theme.textSecondary)
                 .font(.system(size: 16, weight: .medium))
 
             TextField("Search images...", text: $text)
                 .textFieldStyle(PlainTextFieldStyle())
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.theme.textPrimary)
 
             if !text.isEmpty {
                 Button(action: { text = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(Color.theme.textSecondary)
                         .font(.system(size: 16))
                 }
             }
@@ -348,9 +396,12 @@ struct SearchBar: View {
                         Capsule()
                             .fill(
                                 LinearGradient(
-                                    colors: [
+                                    colors: colorScheme == .dark ? [
                                         Color.white.opacity(0.15),
                                         Color.white.opacity(0.05)
+                                    ] : [
+                                        Color.black.opacity(0.05),
+                                        Color.black.opacity(0.02)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -361,9 +412,12 @@ struct SearchBar: View {
                         Capsule()
                             .stroke(
                                 LinearGradient(
-                                    colors: [
+                                    colors: colorScheme == .dark ? [
                                         Color.white.opacity(0.5),
                                         Color.white.opacity(0.1)
+                                    ] : [
+                                        Color.black.opacity(0.2),
+                                        Color.black.opacity(0.05)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -455,6 +509,7 @@ struct ImageDetailDestination: View {
 
 struct FloatingActionButton: View {
     let action: () -> Void
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         Button(action: action) {
@@ -479,7 +534,13 @@ struct FloatingActionButton: View {
                         Circle()
                             .stroke(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.6), Color.white.opacity(0.2)],
+                                    colors: colorScheme == .dark ? [
+                                        Color.white.opacity(0.6),
+                                        Color.white.opacity(0.2)
+                                    ] : [
+                                        Color.black.opacity(0.3),
+                                        Color.black.opacity(0.1)
+                                    ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
