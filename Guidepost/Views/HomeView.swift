@@ -105,6 +105,8 @@ struct HomeView: View {
                                 Task {
                                     isRefreshing = true
                                     await viewModel.loadAnalysisResults()
+                                    deletedImages.removeAll()
+                                    imageToDelete = nil
                                     isRefreshing = false
                                 }
                             }
@@ -147,6 +149,8 @@ struct HomeView: View {
                         .refreshable {
                             isRefreshing = true
                             await viewModel.loadAnalysisResults()
+                            deletedImages.removeAll()
+                            imageToDelete = nil
                             isRefreshing = false
                         }
                     } else {
@@ -193,6 +197,8 @@ struct HomeView: View {
                         .refreshable {
                             isRefreshing = true
                             await viewModel.loadAnalysisResults()
+                            deletedImages.removeAll()
+                            imageToDelete = nil
                             isRefreshing = false
                         }
                         .onTapGesture {
@@ -638,57 +644,37 @@ struct ImageGridCellWithDelete: View {
     @Environment(ImageGridViewModel.self) private var viewModel
     @State private var loadedImage: UIImage?
     @State private var isPressed = false
-    @State private var pressStartTime: Date? = nil
-    @State private var longPressTriggered = false
-    @State private var longPressTimer: Timer? = nil
+    @State private var didTriggerLongPress = false
 
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topTrailing) {
                 imageContent(geometry: geometry)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { _ in
-                                guard pressStartTime == nil else { return }
-                                pressStartTime = Date()
-                                longPressTriggered = false
-                                
-                                withAnimation(.easeInOut(duration: 0.1)) {
-                                    isPressed = true
-                                }
-                                
-                                // Start timer for long press
-                                longPressTimer?.invalidate()
-                                longPressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
-                                    longPressTriggered = true
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                                    impactFeedback.impactOccurred()
-                                    onLongPress()
-                                    
-                                    withAnimation(.easeInOut(duration: 0.1)) {
-                                        isPressed = false
-                                    }
-                                }
+                    .onLongPressGesture(
+                        minimumDuration: 0.5,
+                        maximumDistance: 10,
+                        pressing: { isPressing in
+                            isPressed = isPressing
+                        },
+                        perform: {
+                            didTriggerLongPress = true
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            impactFeedback.impactOccurred()
+                            onLongPress()
+                            DispatchQueue.main.async {
+                                didTriggerLongPress = false
                             }
-                            .onEnded { value in
-                                longPressTimer?.invalidate()
-                                longPressTimer = nil
-                                
-                                withAnimation(.easeInOut(duration: 0.1)) {
-                                    isPressed = false
+                        }
+                    )
+                    .simultaneousGesture(
+                        TapGesture()
+                            .onEnded {
+                                guard !didTriggerLongPress else { return }
+                                if isDeleteVisible {
+                                    onLongPress()
+                                } else {
+                                    onNavigate()
                                 }
-                                
-                                // Only trigger tap if long press wasn't triggered and finger didn't move much
-                                let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
-                                if !longPressTriggered && distance < 10 {
-                                    if isDeleteVisible {
-                                        onLongPress() // Dismiss
-                                    } else {
-                                        onNavigate()
-                                    }
-                                }
-                                
-                                pressStartTime = nil
                             }
                     )
                 
@@ -764,6 +750,7 @@ struct ImageGridCellWithDelete: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDeleteVisible)
     }
+    
 }
 
 // MARK: - Image Detail Destination
