@@ -13,10 +13,71 @@ struct HomeView: View {
     @State private var showUploadSheet = false
     @State private var showProfileSheet = false
     @State private var isRefreshing = false
-
-    let columns = [
-        GridItem(.adaptive(minimum: 100), spacing: 8)
+    
+    // Adaptive grid state
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var columnCount: Int = 3
+    @State private var lastColumnCount: Int = 3
+    
+    // Delete mode state
+    @State private var imageToDelete: String? = nil
+    @State private var deletedImages: Set<String> = []
+    
+    // Define zoom levels for snapping
+    private let zoomLevels: [(scale: CGFloat, columns: Int)] = [
+        (0.6, 5),  // Most zoomed out
+        (1.0, 3),  // Default
+        (1.8, 2),  // Medium
+        (3.0, 1)   // Single column
     ]
+    
+    private let hapticFeedback = UIImpactFeedbackGenerator(style: .light)
+    
+    // Computed properties for adaptive grid
+    private var gridColumns: [GridItem] {
+        Array(
+            repeating: GridItem(.flexible(), spacing: spacing),
+            count: columnCount
+        )
+    }
+    
+    private var spacing: CGFloat {
+        columnCount == 1 ? 8 : 2
+    }
+    
+    // Magnification gesture
+    private var magnificationGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                let delta = value / lastScale
+                lastScale = value
+                
+                let newScale = min(max(scale * delta, 0.5), 4.0)
+                scale = newScale
+                
+                let newColumns = columnsForScale(newScale)
+                if newColumns != lastColumnCount {
+                    // Provide haptic feedback on column change
+                    hapticFeedback.impactOccurred()
+                    
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        columnCount = newColumns
+                    }
+                    lastColumnCount = newColumns
+                }
+            }
+            .onEnded { _ in
+                lastScale = 1.0
+                
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    let snapped = snapToNearestLevel(scale)
+                    scale = snapped.scale
+                    columnCount = snapped.columns
+                    lastColumnCount = snapped.columns
+                }
+            }
+    }
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -87,20 +148,62 @@ struct HomeView: View {
                         }
                     } else {
                         ScrollView {
-                            LazyVGrid(columns: columns, spacing: 8) {
+                            LazyVGrid(columns: gridColumns, spacing: spacing) {
                                 ForEach(viewModel.filteredResults) { result in
-                                    NavigationLink(
-                                        destination: ImageDetailDestination(analysisResult: result)
-                                    ) {
-                                        ImageGridCell(analysisResult: result)
+                                    if !deletedImages.contains(result.imageId) {
+                                        ImageGridCellWithDelete(
+                                            analysisResult: result,
+                                            columnCount: columnCount,
+                                            isDeleteVisible: imageToDelete == result.imageId,
+                                            onLongPress: {
+                                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                    if imageToDelete == result.imageId {
+                                                        imageToDelete = nil
+                                                    } else {
+                                                        imageToDelete = result.imageId
+                                                    }
+                                                }
+                                            },
+                                            onDelete: {
+                                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                                    deletedImages.insert(result.imageId)
+                                                    imageToDelete = nil
+                                                }
+                                                // TODO: Call delete API endpoint here
+                                            },
+                                            onTap: {
+                                                // Dismiss delete button if tapping elsewhere
+                                                if imageToDelete != nil && imageToDelete != result.imageId {
+                                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                        imageToDelete = nil
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        .transition(.asymmetric(
+                                            insertion: .scale.combined(with: .opacity),
+                                            removal: .scale(scale: 0.5).combined(with: .opacity)
+                                        ))
                                     }
                                 }
                             }
+                            .padding(.horizontal, spacing)
+                            .animation(.easeInOut(duration: 0.2), value: columnCount)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: deletedImages)
                         }
+                        .simultaneousGesture(magnificationGesture)
                         .refreshable {
                             isRefreshing = true
                             await viewModel.loadAnalysisResults()
                             isRefreshing = false
+                        }
+                        .onTapGesture {
+                            // Dismiss delete button when tapping empty space
+                            if imageToDelete != nil {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    imageToDelete = nil
+                                }
+                            }
                         }
                     }
                 }
@@ -137,6 +240,39 @@ struct HomeView: View {
                 ProfileSheetView()
             }
         }
+        .onAppear {
+            hapticFeedback.prepare()
+        }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func columnsForScale(_ scale: CGFloat) -> Int {
+        for (index, level) in zoomLevels.enumerated() {
+            if index == zoomLevels.count - 1 {
+                return level.columns
+            }
+            let nextLevel = zoomLevels[index + 1]
+            let midpoint = (level.scale + nextLevel.scale) / 2
+            if scale < midpoint {
+                return level.columns
+            }
+        }
+        return zoomLevels.last?.columns ?? 3
+    }
+    
+    private func snapToNearestLevel(_ scale: CGFloat) -> (scale: CGFloat, columns: Int) {
+        var closest = zoomLevels[0]
+        var minDistance = abs(scale - closest.scale)
+        
+        for level in zoomLevels {
+            let distance = abs(scale - level.scale)
+            if distance < minDistance {
+                minDistance = distance
+                closest = level
+            }
+        }
+        return closest
     }
 }
 
@@ -436,48 +572,172 @@ struct SearchBar: View {
 
 struct ImageGridCell: View {
     let analysisResult: ImageAnalysisResult
+    let columnCount: Int
     @Environment(ImageGridViewModel.self) private var viewModel
     @State private var loadedImage: UIImage?
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            if let uiImage = loadedImage {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 125, height: 125)
-                    .clipped()
-            } else {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 125, height: 125)
-                    .overlay {
-                        ProgressView()
-                    }
-            }
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                if let uiImage = loadedImage {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .clipped()
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .overlay {
+                            ProgressView()
+                        }
+                }
 
-            // Processing overlay
-            if analysisResult.status == .processing {
-                Text("Processing")
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.orange.opacity(0.6))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                    )
-                    .shadow(color: .orange.opacity(0.4), radius: 4, x: 0, y: 2)
-                    .padding(.bottom, 6)
+                // Processing overlay
+                if analysisResult.status == .processing {
+                    Text("Processing")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.orange.opacity(0.6))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .shadow(color: .orange.opacity(0.4), radius: 4, x: 0, y: 2)
+                        .padding(.bottom, 6)
+                }
             }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .aspectRatio(1, contentMode: .fit)
+        .task {
+            loadedImage = await viewModel.loadImageData(for: analysisResult.imageId)
+        }
+    }
+}
+
+// MARK: - Image Grid Cell With Delete
+
+struct ImageGridCellWithDelete: View {
+    let analysisResult: ImageAnalysisResult
+    let columnCount: Int
+    let isDeleteVisible: Bool
+    let onLongPress: () -> Void
+    let onDelete: () -> Void
+    let onTap: () -> Void
+    
+    @Environment(ImageGridViewModel.self) private var viewModel
+    @State private var loadedImage: UIImage?
+    @State private var isPressed = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .topTrailing) {
+                // Main image content
+                ZStack(alignment: .bottom) {
+                    if let uiImage = loadedImage {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: geometry.size.width, height: geometry.size.width)
+                            .clipped()
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: geometry.size.width, height: geometry.size.width)
+                            .overlay {
+                                ProgressView()
+                            }
+                    }
+
+                    // Processing overlay
+                    if analysisResult.status == .processing {
+                        Text("Processing")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.orange.opacity(0.6))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                            .shadow(color: .orange.opacity(0.4), radius: 4, x: 0, y: 2)
+                            .padding(.bottom, 6)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .scaleEffect(isPressed ? 0.95 : 1.0)
+                .scaleEffect(isDeleteVisible ? 0.92 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDeleteVisible)
+                
+                // Delete button
+                if isDeleteVisible {
+                    Button(action: onDelete) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 26, height: 26)
+                                .shadow(color: .red.opacity(0.5), radius: 4, x: 0, y: 2)
+                            
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .offset(x: 6, y: -6)
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(1)
+                }
+            }
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.5)
+                    .onChanged { _ in
+                        isPressed = true
+                    }
+                    .onEnded { _ in
+                        isPressed = false
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                        impactFeedback.impactOccurred()
+                        onLongPress()
+                    }
+            )
+            .highPriorityGesture(
+                TapGesture()
+                    .onEnded {
+                        if isDeleteVisible {
+                            // If delete is visible, tapping dismisses it
+                            onLongPress()
+                        } else {
+                            onTap()
+                        }
+                    },
+                including: isDeleteVisible ? .all : .subviews
+            )
+            .background(
+                NavigationLink(destination: ImageDetailDestination(analysisResult: analysisResult)) {
+                    EmptyView()
+                }
+                .opacity(isDeleteVisible ? 0 : 1)
+                .disabled(isDeleteVisible)
+            )
+        }
+        .aspectRatio(1, contentMode: .fit)
         .task {
             loadedImage = await viewModel.loadImageData(for: analysisResult.imageId)
         }
