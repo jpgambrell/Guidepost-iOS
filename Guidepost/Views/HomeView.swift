@@ -46,7 +46,7 @@ struct HomeView: View {
     }
     
     private var spacing: CGFloat {
-        columnCount == 1 ? 8 : 2
+        columnCount == 1 ? 2 : 1
     }
     
     // Magnification gesture
@@ -189,10 +189,11 @@ struct HomeView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, spacing)
+                            .padding(.top, 6)
                             .animation(.easeInOut(duration: 0.2), value: columnCount)
                             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: deletedImages)
                         }
+                        .ignoresSafeArea(.container, edges: [.bottom])
                         .simultaneousGesture(magnificationGesture)
                         .refreshable {
                             isRefreshing = true
@@ -226,15 +227,13 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
-            .navigationTitle("Guidepost")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showProfileSheet = true }) {
-                        ProfileButton(user: authViewModel.currentUser)
-                    }
-                }
+        .overlay(alignment: .topTrailing) {
+            Button(action: { showProfileSheet = true }) {
+                ProfileButton(user: authViewModel.currentUser)
             }
+            .padding(.trailing, 16)
+            .padding(.top, 12)
+        }
             .sheet(isPresented: $showUploadSheet, onDismiss: {
                 // Refresh analysis results when upload sheet is dismissed
                 Task {
@@ -622,7 +621,6 @@ struct ImageGridCell: View {
                         .padding(.bottom, 6)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .aspectRatio(1, contentMode: .fit)
         .task {
@@ -692,7 +690,7 @@ struct ImageGridCellWithDelete: View {
                                 .foregroundColor(.white)
                         }
                     }
-                    .offset(x: 6, y: -6)
+                    .padding(6)
                     .transition(.scale.combined(with: .opacity))
                     .zIndex(1)
                 }
@@ -743,7 +741,6 @@ struct ImageGridCellWithDelete: View {
                     .padding(.bottom, 6)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
         .contentShape(Rectangle())
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .scaleEffect(isDeleteVisible ? 0.92 : 1.0)

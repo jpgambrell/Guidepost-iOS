@@ -133,6 +133,8 @@ Temporary Items
 !*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
+**/project.xcworkspace/xcuserdata/**
+**/*.xcuserstate
 /*.gcno
 **/xcshareddata/WorkspaceSettings.xcsettings
 
@@ -155,5 +157,4 @@ Temporary Items
 .vscode/
 *.sublime-project
 *.sublime-workspace
-Guidepost.xcodeproj/project.xcworkspace/xcuserdata/john.gambrell.xcuserdatad/UserInterfaceState.xcuserstate
-Guidepost.xcodeproj/project.xcworkspace/xcuserdata/john.gambrell.xcuserdatad/UserInterfaceState.xcuserstate
+
