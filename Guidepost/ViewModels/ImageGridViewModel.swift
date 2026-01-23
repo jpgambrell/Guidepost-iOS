@@ -88,4 +88,12 @@ class ImageGridViewModel {
         await loadAnalysisResults()
         return uploadedImage
     }
+
+    func deleteImage(_ imageId: String) async throws {
+        try await apiService.deleteImage(id: imageId)
+        
+        // Remove from local cache and results
+        imageCache.removeValue(forKey: imageId)
+        analysisResults.removeAll { $0.imageId == imageId }
+    }
 }

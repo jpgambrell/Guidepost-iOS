@@ -307,6 +307,45 @@ class ImageAPIService {
         }
     }
 
+    // MARK: - Delete Image
+
+    func deleteImage(id: String) async throws {
+        guard let url = URL(string: "\(uploadServiceURL)/api/images/\(id)") else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        // Add authorization header
+        try await addAuthorizationHeader(to: &request)
+        
+        logRequest(request)
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+            
+            logResponse(httpResponse, data: data)
+
+            try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.httpError(statusCode: httpResponse.statusCode)
+            }
+        } catch let error as APIError {
+            throw error
+        } catch {
+            #if DEBUG
+            print("📷 Network Error: \(error)")
+            #endif
+            throw APIError.networkError(error)
+        }
+    }
+
     // MARK: - Health Check
 
     func healthCheckUploadService() async throws -> Bool {

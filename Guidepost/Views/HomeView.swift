@@ -23,6 +23,8 @@ struct HomeView: View {
     // Delete mode state
     @State private var imageToDelete: String? = nil
     @State private var deletedImages: Set<String> = []
+    @State private var showDeleteConfirmation = false
+    @State private var imageIdPendingDeletion: String? = nil
     
     // Navigation state
     @State private var selectedImageForNavigation: ImageAnalysisResult? = nil
@@ -172,11 +174,8 @@ struct HomeView: View {
                                                 }
                                             },
                                             onDelete: {
-                                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                                    deletedImages.insert(result.imageId)
-                                                    imageToDelete = nil
-                                                }
-                                                // TODO: Call delete API endpoint here
+                                                imageIdPendingDeletion = result.imageId
+                                                showDeleteConfirmation = true
                                             },
                                             onNavigate: {
                                                 selectedImageForNavigation = result
@@ -244,6 +243,39 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showProfileSheet) {
                 ProfileSheetView()
+            }
+            .confirmationDialog(
+                "Delete Image",
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    guard let imageId = imageIdPendingDeletion else { return }
+                    
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        deletedImages.insert(imageId)
+                        imageToDelete = nil
+                    }
+                    
+                    Task {
+                        do {
+                            try await viewModel.deleteImage(imageId)
+                        } catch {
+                            // If delete fails, remove from deletedImages to show it again
+                            withAnimation {
+                                deletedImages.remove(imageId)
+                            }
+                            print("Failed to delete image: \(error.localizedDescription)")
+                        }
+                    }
+                    
+                    imageIdPendingDeletion = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    imageIdPendingDeletion = nil
+                }
+            } message: {
+                Text("This action cannot be undone. The image and all associated data will be permanently deleted.")
             }
         }
         .onAppear {
