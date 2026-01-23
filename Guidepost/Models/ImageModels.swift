@@ -112,7 +112,7 @@ struct UploadResponse: Codable {
 
 // MARK: - Analysis Service Models
 
-struct ImageAnalysisResult: Codable, Identifiable {
+struct ImageAnalysisResult: Codable, Identifiable, Hashable {
     let imageId: String
     let userId: String
     let filename: String

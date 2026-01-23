@@ -24,6 +24,9 @@ struct HomeView: View {
     @State private var imageToDelete: String? = nil
     @State private var deletedImages: Set<String> = []
     
+    // Navigation state
+    @State private var selectedImageForNavigation: ImageAnalysisResult? = nil
+    
     // Define zoom levels for snapping
     private let zoomLevels: [(scale: CGFloat, columns: Int)] = [
         (0.6, 5),  // Most zoomed out
@@ -171,13 +174,8 @@ struct HomeView: View {
                                                 }
                                                 // TODO: Call delete API endpoint here
                                             },
-                                            onTap: {
-                                                // Dismiss delete button if tapping elsewhere
-                                                if imageToDelete != nil && imageToDelete != result.imageId {
-                                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                                        imageToDelete = nil
-                                                    }
-                                                }
+                                            onNavigate: {
+                                                selectedImageForNavigation = result
                                             }
                                         )
                                         .transition(.asymmetric(
@@ -204,6 +202,9 @@ struct HomeView: View {
                                     imageToDelete = nil
                                 }
                             }
+                        }
+                        .navigationDestination(item: $selectedImageForNavigation) { result in
+                            ImageDetailDestination(analysisResult: result)
                         }
                     }
                 }
@@ -632,58 +633,64 @@ struct ImageGridCellWithDelete: View {
     let isDeleteVisible: Bool
     let onLongPress: () -> Void
     let onDelete: () -> Void
-    let onTap: () -> Void
+    let onNavigate: () -> Void
     
     @Environment(ImageGridViewModel.self) private var viewModel
     @State private var loadedImage: UIImage?
     @State private var isPressed = false
+    @State private var pressStartTime: Date? = nil
+    @State private var longPressTriggered = false
+    @State private var longPressTimer: Timer? = nil
 
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topTrailing) {
-                // Main image content
-                ZStack(alignment: .bottom) {
-                    if let uiImage = loadedImage {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: geometry.size.width, height: geometry.size.width)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(width: geometry.size.width, height: geometry.size.width)
-                            .overlay {
-                                ProgressView()
+                imageContent(geometry: geometry)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in
+                                guard pressStartTime == nil else { return }
+                                pressStartTime = Date()
+                                longPressTriggered = false
+                                
+                                withAnimation(.easeInOut(duration: 0.1)) {
+                                    isPressed = true
+                                }
+                                
+                                // Start timer for long press
+                                longPressTimer?.invalidate()
+                                longPressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
+                                    longPressTriggered = true
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                    impactFeedback.impactOccurred()
+                                    onLongPress()
+                                    
+                                    withAnimation(.easeInOut(duration: 0.1)) {
+                                        isPressed = false
+                                    }
+                                }
                             }
-                    }
-
-                    // Processing overlay
-                    if analysisResult.status == .processing {
-                        Text("Processing")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.orange.opacity(0.6))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                            .shadow(color: .orange.opacity(0.4), radius: 4, x: 0, y: 2)
-                            .padding(.bottom, 6)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .scaleEffect(isPressed ? 0.95 : 1.0)
-                .scaleEffect(isDeleteVisible ? 0.92 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDeleteVisible)
+                            .onEnded { value in
+                                longPressTimer?.invalidate()
+                                longPressTimer = nil
+                                
+                                withAnimation(.easeInOut(duration: 0.1)) {
+                                    isPressed = false
+                                }
+                                
+                                // Only trigger tap if long press wasn't triggered and finger didn't move much
+                                let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                                if !longPressTriggered && distance < 10 {
+                                    if isDeleteVisible {
+                                        onLongPress() // Dismiss
+                                    } else {
+                                        onNavigate()
+                                    }
+                                }
+                                
+                                pressStartTime = nil
+                            }
+                    )
                 
                 // Delete button
                 if isDeleteVisible {
@@ -704,43 +711,58 @@ struct ImageGridCellWithDelete: View {
                     .zIndex(1)
                 }
             }
-            .contentShape(Rectangle())
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.5)
-                    .onChanged { _ in
-                        isPressed = true
-                    }
-                    .onEnded { _ in
-                        isPressed = false
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                        onLongPress()
-                    }
-            )
-            .highPriorityGesture(
-                TapGesture()
-                    .onEnded {
-                        if isDeleteVisible {
-                            // If delete is visible, tapping dismisses it
-                            onLongPress()
-                        } else {
-                            onTap()
-                        }
-                    },
-                including: isDeleteVisible ? .all : .subviews
-            )
-            .background(
-                NavigationLink(destination: ImageDetailDestination(analysisResult: analysisResult)) {
-                    EmptyView()
-                }
-                .opacity(isDeleteVisible ? 0 : 1)
-                .disabled(isDeleteVisible)
-            )
         }
         .aspectRatio(1, contentMode: .fit)
         .task {
             loadedImage = await viewModel.loadImageData(for: analysisResult.imageId)
         }
+    }
+    
+    @ViewBuilder
+    private func imageContent(geometry: GeometryProxy) -> some View {
+        ZStack(alignment: .bottom) {
+            if let uiImage = loadedImage {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.width)
+                    .clipped()
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: geometry.size.width, height: geometry.size.width)
+                    .overlay {
+                        ProgressView()
+                    }
+            }
+
+            // Processing overlay
+            if analysisResult.status == .processing {
+                Text("Processing")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.orange.opacity(0.6))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+                    .shadow(color: .orange.opacity(0.4), radius: 4, x: 0, y: 2)
+                    .padding(.bottom, 6)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .contentShape(Rectangle())
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .scaleEffect(isDeleteVisible ? 0.92 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDeleteVisible)
     }
 }
 
