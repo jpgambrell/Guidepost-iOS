@@ -28,6 +28,18 @@ struct APIResponse<T: Codable>: Codable {
     }
 }
 
+// MARK: - Image Metadata
+
+struct ImageMetadata {
+    var latitude: Double?
+    var longitude: Double?
+    var creationDate: Date?
+    
+    var hasLocation: Bool {
+        latitude != nil && longitude != nil
+    }
+}
+
 // MARK: - Upload Service Models
 
 struct UploadedImage: Codable, Identifiable {

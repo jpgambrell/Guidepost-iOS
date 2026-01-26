@@ -101,7 +101,7 @@ class ImageAPIService {
 
     // MARK: - Upload Image
 
-    func uploadImage(_ image: UIImage) async throws -> UploadedImage {
+    func uploadImage(_ image: UIImage, metadata: ImageMetadata? = nil) async throws -> UploadedImage {
         guard let url = URL(string: "\(uploadServiceURL)/api/upload") else {
             throw APIError.invalidURL
         }
@@ -125,6 +125,29 @@ class ImageAPIService {
         body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
         body.append(imageData)
         body.append("\r\n".data(using: .utf8)!)
+        
+        // Add metadata fields if available
+        if let metadata = metadata {
+            if let lat = metadata.latitude {
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"latitude\"\r\n\r\n".data(using: .utf8)!)
+                body.append("\(lat)\r\n".data(using: .utf8)!)
+            }
+            if let lon = metadata.longitude {
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"longitude\"\r\n\r\n".data(using: .utf8)!)
+                body.append("\(lon)\r\n".data(using: .utf8)!)
+            }
+            if let date = metadata.creationDate {
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                let dateString = formatter.string(from: date)
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"creationDate\"\r\n\r\n".data(using: .utf8)!)
+                body.append("\(dateString)\r\n".data(using: .utf8)!)
+            }
+        }
+        
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         request.httpBody = body

@@ -15,6 +15,7 @@ struct ImageUploadView: View {
     @Environment(ImageGridViewModel.self) private var viewModel
 
     @State private var selectedImage: UIImage?
+    @State private var selectedMetadata: ImageMetadata?
     @State private var showCamera = false
     @State private var showPhotoPicker = false
     @State private var isUploading = false
@@ -133,10 +134,10 @@ struct ImageUploadView: View {
                 }
             }
             .sheet(isPresented: $showCamera) {
-                ImagePicker(sourceType: .camera, selectedImage: $selectedImage)
+                ImagePicker(sourceType: .camera, selectedImage: $selectedImage, selectedMetadata: $selectedMetadata)
             }
             .sheet(isPresented: $showPhotoPicker) {
-                ImagePicker(sourceType: .photoLibrary, selectedImage: $selectedImage)
+                ImagePicker(sourceType: .photoLibrary, selectedImage: $selectedImage, selectedMetadata: $selectedMetadata)
             }
             .alert("Success!", isPresented: $showSuccessMessage) {
                 Button("OK") {
@@ -177,7 +178,7 @@ struct ImageUploadView: View {
 
         Task {
             do {
-                _ = try await viewModel.uploadImage(image)
+                _ = try await viewModel.uploadImage(image, metadata: selectedMetadata)
                 showSuccessMessage = true
             } catch {
                 uploadError = error.localizedDescription
@@ -233,6 +234,7 @@ struct ImageUploadView: View {
 struct ImagePicker: UIViewControllerRepresentable {
     let sourceType: UIImagePickerController.SourceType
     @Binding var selectedImage: UIImage?
+    @Binding var selectedMetadata: ImageMetadata?
     @Environment(\.dismiss) var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
@@ -262,6 +264,45 @@ struct ImagePicker: UIViewControllerRepresentable {
             if let image = info[.originalImage] as? UIImage {
                 parent.selectedImage = image
             }
+            
+            // Extract metadata based on source type
+            var metadata = ImageMetadata()
+            
+            if parent.sourceType == .photoLibrary {
+                // Extract metadata from PHAsset for photo library
+                if let asset = info[.phAsset] as? PHAsset {
+                    let location = asset.location
+                    metadata.latitude = location?.coordinate.latitude
+                    metadata.longitude = location?.coordinate.longitude
+                    metadata.creationDate = asset.creationDate
+                }
+            } else if parent.sourceType == .camera {
+                // Extract metadata from EXIF for camera
+                if let mediaMetadata = info[.mediaMetadata] as? [String: Any] {
+                    // GPS data in {GPS} dictionary
+                    if let gps = mediaMetadata["{GPS}"] as? [String: Any] {
+                        metadata.latitude = gps["Latitude"] as? Double
+                        metadata.longitude = gps["Longitude"] as? Double
+                        // Handle N/S and E/W reference
+                        if let latRef = gps["LatitudeRef"] as? String, latRef == "S" {
+                            metadata.latitude? *= -1
+                        }
+                        if let lonRef = gps["LongitudeRef"] as? String, lonRef == "W" {
+                            metadata.longitude? *= -1
+                        }
+                    }
+                    // Date from {Exif} dictionary
+                    if let exif = mediaMetadata["{Exif}"] as? [String: Any],
+                       let dateString = exif["DateTimeOriginal"] as? String {
+                        // Parse EXIF date format: "yyyy:MM:dd HH:mm:ss"
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+                        metadata.creationDate = formatter.date(from: dateString)
+                    }
+                }
+            }
+            
+            parent.selectedMetadata = metadata
             parent.dismiss()
         }
 

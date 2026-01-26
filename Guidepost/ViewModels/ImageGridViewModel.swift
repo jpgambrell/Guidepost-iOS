@@ -81,8 +81,8 @@ class ImageGridViewModel {
         return nil
     }
 
-    func uploadImage(_ image: UIImage) async throws -> UploadedImage {
-        let uploadedImage = try await apiService.uploadImage(image)
+    func uploadImage(_ image: UIImage, metadata: ImageMetadata? = nil) async throws -> UploadedImage {
+        let uploadedImage = try await apiService.uploadImage(image, metadata: metadata)
         imageCache[uploadedImage.id] = image
         // Refresh analysis results after upload to show new image once analyzed
         await loadAnalysisResults()
