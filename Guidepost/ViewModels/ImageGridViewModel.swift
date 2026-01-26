@@ -12,6 +12,7 @@ import Observation
 @Observable
 class ImageGridViewModel {
     var analysisResults: [ImageAnalysisResult] = []
+    var imageInfoLookup: [String: ImageInfo] = [:]  // Lookup by imageId for location/date
     var imageCache: [String: UIImage] = [:]
     var errorMessage: String?
     var searchText = ""
@@ -47,9 +48,16 @@ class ImageGridViewModel {
 
         loadTask = Task {
             do {
-                let results = try await apiService.fetchAllAnalysis()
+                // Fetch both analysis results and image info in parallel
+                async let analysisTask = apiService.fetchAllAnalysis()
+                async let imagesTask = apiService.fetchAllImages()
+                
+                let (results, images) = try await (analysisTask, imagesTask)
+                
                 if !Task.isCancelled {
                     analysisResults = results
+                    // Build lookup dictionary for image info (location/date)
+                    imageInfoLookup = Dictionary(uniqueKeysWithValues: images.map { ($0.id, $0) })
                     isLoading = false
                 }
             } catch {
@@ -61,6 +69,11 @@ class ImageGridViewModel {
         }
 
         await loadTask?.value
+    }
+    
+    /// Get image info (location/date) for an image
+    func getImageInfo(for imageId: String) -> ImageInfo? {
+        return imageInfoLookup[imageId]
     }
 
     func loadImageData(for imageId: String) async -> UIImage? {

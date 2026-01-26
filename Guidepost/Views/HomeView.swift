@@ -786,7 +786,11 @@ struct ImageDetailDestination: View {
     var body: some View {
         Group {
             if let uiImage = loadedImage {
-                ImageDetailView(analysisResult: analysisResult, uiImage: uiImage)
+                ImageDetailView(
+                    analysisResult: analysisResult,
+                    imageInfo: viewModel.getImageInfo(for: analysisResult.imageId),
+                    uiImage: uiImage
+                )
             } else {
                 ProgressView("Loading image...")
             }
@@ -801,57 +805,27 @@ struct ImageDetailDestination: View {
 
 struct FloatingActionButton: View {
     let action: () -> Void
-    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         Button(action: action) {
             ZStack {
-                // Outer glow
+                // Solid green circle
                 Circle()
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.8), // #10B981
-                                Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.5)  // #059669
+                                Color(red: 0.063, green: 0.725, blue: 0.506), // #10B981
+                                Color(red: 0.020, green: 0.588, blue: 0.412)  // #059669
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 50, height: 50)
-                    .blur(radius: 5)
-
-                // Glass circle
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: colorScheme == .dark ? [
-                                        Color.white.opacity(0.6),
-                                        Color.white.opacity(0.2)
-                                    ] : [
-                                        Color.black.opacity(0.3),
-                                        Color.black.opacity(0.1)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.5
-                            )
-                    )
-                    .background(
-                        Circle()
-                            .fill(Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.4)) // #10B981
-                            .frame(width: 50, height: 50)
-                    )
 
                 Image(systemName: "plus")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
             }
             .shadow(color: Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 12, x: 0, y: 6) // #059669
             .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)

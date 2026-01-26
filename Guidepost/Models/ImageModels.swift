@@ -122,6 +122,117 @@ struct UploadResponse: Codable {
     }
 }
 
+// MARK: - Image Info Models (from /api/images and /api/images/{id}/info)
+
+struct ImageInfo: Codable, Identifiable {
+    let id: String
+    let userId: String
+    let filename: String
+    let originalName: String
+    let mimetype: String
+    let size: Int
+    let uploadedAt: String
+    let path: String
+    let status: String?
+    let latitude: Double?
+    let longitude: Double?
+    let creationDate: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId
+        case filename
+        case originalName
+        case mimetype
+        case size
+        case uploadedAt
+        case path
+        case status
+        case latitude
+        case longitude
+        case creationDate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        userId = try container.decode(String.self, forKey: .userId)
+        filename = try container.decode(String.self, forKey: .filename)
+        originalName = try container.decode(String.self, forKey: .originalName)
+        mimetype = try container.decode(String.self, forKey: .mimetype)
+        size = try container.decode(Int.self, forKey: .size)
+        uploadedAt = try container.decode(String.self, forKey: .uploadedAt)
+        path = try container.decode(String.self, forKey: .path)
+        status = try container.decodeIfPresent(String.self, forKey: .status)
+        latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
+        longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
+        creationDate = try container.decodeIfPresent(String.self, forKey: .creationDate)
+    }
+    
+    var hasLocation: Bool {
+        latitude != nil && longitude != nil
+    }
+    
+    var formattedCoordinates: String? {
+        guard let lat = latitude, let lon = longitude else { return nil }
+        let latDirection = lat >= 0 ? "N" : "S"
+        let lonDirection = lon >= 0 ? "E" : "W"
+        return String(format: "%.4f° %@, %.4f° %@", abs(lat), latDirection, abs(lon), lonDirection)
+    }
+    
+    var creationDateParsed: Date? {
+        guard let creationDate = creationDate else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: creationDate) {
+            return date
+        }
+        // Try without fractional seconds
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: creationDate)
+    }
+    
+    var formattedCreationDate: String? {
+        guard let date = creationDateParsed else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+struct ImageInfoResponse: Codable {
+    let success: Bool
+    let data: ImageInfo
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        data = try container.decode(ImageInfo.self, forKey: .data)
+    }
+}
+
+struct ImageInfoListResponse: Codable {
+    let success: Bool
+    let data: [ImageInfo]
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decode(Bool.self, forKey: .success)
+        data = try container.decode([ImageInfo].self, forKey: .data)
+    }
+}
+
 // MARK: - Analysis Service Models
 
 struct ImageAnalysisResult: Codable, Identifiable, Hashable {

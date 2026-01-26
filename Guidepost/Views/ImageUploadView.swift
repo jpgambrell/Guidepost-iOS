@@ -6,9 +6,61 @@
 //
 
 import AVFoundation
+import CoreLocation
 import Photos
 import PhotosUI
 import SwiftUI
+
+// MARK: - Location Manager for Camera Captures
+
+@Observable
+@MainActor
+class CameraLocationManager: NSObject, CLLocationManagerDelegate {
+    private let locationManager = CLLocationManager()
+    
+    var currentLocation: CLLocation?
+    var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    
+    override init() {
+        super.init()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        authorizationStatus = locationManager.authorizationStatus
+    }
+    
+    func requestPermission() {
+        locationManager.requestWhenInUseAuthorization()
+    }
+    
+    func startUpdatingLocation() {
+        locationManager.startUpdatingLocation()
+    }
+    
+    func stopUpdatingLocation() {
+        locationManager.stopUpdatingLocation()
+    }
+    
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        let location = locations.last
+        Task { @MainActor in
+            self.currentLocation = location
+        }
+    }
+    
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor in
+            self.authorizationStatus = status
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                self.startUpdatingLocation()
+            }
+        }
+    }
+    
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Location manager failed: \(error.localizedDescription)")
+    }
+}
 
 struct ImageUploadView: View {
     @Environment(\.dismiss) var dismiss
@@ -23,6 +75,9 @@ struct ImageUploadView: View {
     @State private var showSuccessMessage = false
     @State private var showPermissionAlert = false
     @State private var showPhotoPermissionAlert = false
+    @State private var showLocationPermissionAlert = false
+    
+    @State private var locationManager = CameraLocationManager()
 
     var body: some View {
         NavigationStack {
@@ -134,10 +189,20 @@ struct ImageUploadView: View {
                 }
             }
             .sheet(isPresented: $showCamera) {
-                ImagePicker(sourceType: .camera, selectedImage: $selectedImage, selectedMetadata: $selectedMetadata)
+                ImagePicker(
+                    sourceType: .camera,
+                    selectedImage: $selectedImage,
+                    selectedMetadata: $selectedMetadata,
+                    fallbackLocation: locationManager.currentLocation
+                )
             }
             .sheet(isPresented: $showPhotoPicker) {
-                ImagePicker(sourceType: .photoLibrary, selectedImage: $selectedImage, selectedMetadata: $selectedMetadata)
+                ImagePicker(
+                    sourceType: .photoLibrary,
+                    selectedImage: $selectedImage,
+                    selectedMetadata: $selectedMetadata,
+                    fallbackLocation: nil
+                )
             }
             .alert("Success!", isPresented: $showSuccessMessage) {
                 Button("OK") {
@@ -166,6 +231,16 @@ struct ImageUploadView: View {
             } message: {
                 Text("Please enable full photo library access in Settings to select photos.")
             }
+            .alert("Location Permission Recommended", isPresented: $showLocationPermissionAlert) {
+                Button("Settings", role: .none) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Continue Without Location", role: .cancel) {}
+            } message: {
+                Text("Location access is recommended to capture where your photos were taken. You can enable it in Settings.")
+            }
 
         }
     }
@@ -190,12 +265,13 @@ struct ImageUploadView: View {
     private func checkCameraPermission() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            showCamera = true
+            // Also ensure location permission for geotagging camera photos
+            ensureLocationPermissionAndShowCamera()
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 if granted {
                     DispatchQueue.main.async {
-                        showCamera = true
+                        ensureLocationPermissionAndShowCamera()
                     }
                 }
             }
@@ -203,6 +279,24 @@ struct ImageUploadView: View {
             showPermissionAlert = true
         @unknown default:
             break
+        }
+    }
+    
+    private func ensureLocationPermissionAndShowCamera() {
+        switch locationManager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.startUpdatingLocation()
+            showCamera = true
+        case .notDetermined:
+            locationManager.requestPermission()
+            // Show camera anyway, location will be captured if permission granted
+            showCamera = true
+        case .denied, .restricted:
+            // Show alert but still allow camera use (just won't have location)
+            showLocationPermissionAlert = true
+            showCamera = true
+        @unknown default:
+            showCamera = true
         }
     }
     
@@ -235,6 +329,7 @@ struct ImagePicker: UIViewControllerRepresentable {
     let sourceType: UIImagePickerController.SourceType
     @Binding var selectedImage: UIImage?
     @Binding var selectedMetadata: ImageMetadata?
+    let fallbackLocation: CLLocation?  // Used for camera when EXIF GPS is not available
     @Environment(\.dismiss) var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
@@ -278,17 +373,23 @@ struct ImagePicker: UIViewControllerRepresentable {
                 }
             } else if parent.sourceType == .camera {
                 // Extract metadata from EXIF for camera
+                var hasExifLocation = false
+                
                 if let mediaMetadata = info[.mediaMetadata] as? [String: Any] {
                     // GPS data in {GPS} dictionary
                     if let gps = mediaMetadata["{GPS}"] as? [String: Any] {
-                        metadata.latitude = gps["Latitude"] as? Double
-                        metadata.longitude = gps["Longitude"] as? Double
-                        // Handle N/S and E/W reference
-                        if let latRef = gps["LatitudeRef"] as? String, latRef == "S" {
-                            metadata.latitude? *= -1
-                        }
-                        if let lonRef = gps["LongitudeRef"] as? String, lonRef == "W" {
-                            metadata.longitude? *= -1
+                        if let lat = gps["Latitude"] as? Double,
+                           let lon = gps["Longitude"] as? Double {
+                            metadata.latitude = lat
+                            metadata.longitude = lon
+                            hasExifLocation = true
+                            // Handle N/S and E/W reference
+                            if let latRef = gps["LatitudeRef"] as? String, latRef == "S" {
+                                metadata.latitude? *= -1
+                            }
+                            if let lonRef = gps["LongitudeRef"] as? String, lonRef == "W" {
+                                metadata.longitude? *= -1
+                            }
                         }
                     }
                     // Date from {Exif} dictionary
@@ -299,6 +400,17 @@ struct ImagePicker: UIViewControllerRepresentable {
                         formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
                         metadata.creationDate = formatter.date(from: dateString)
                     }
+                }
+                
+                // Fallback: Use CoreLocation if EXIF GPS is not available
+                if !hasExifLocation, let fallbackLocation = parent.fallbackLocation {
+                    metadata.latitude = fallbackLocation.coordinate.latitude
+                    metadata.longitude = fallbackLocation.coordinate.longitude
+                }
+                
+                // If no EXIF date, use current time for camera captures
+                if metadata.creationDate == nil {
+                    metadata.creationDate = Date()
                 }
             }
             

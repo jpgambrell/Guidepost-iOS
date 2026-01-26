@@ -5,10 +5,13 @@
 //  Created by John Gambrell on 11/21/25.
 //
 
+import CoreLocation
+import MapKit
 import SwiftUI
 
 struct ImageDetailView: View {
     @State private var analysisResult: ImageAnalysisResult
+    let imageInfo: ImageInfo?  // Passed in from HomeView (no fetch needed)
     let uiImage: UIImage?
 
     // Zoom/pan state
@@ -40,8 +43,9 @@ struct ImageDetailView: View {
         return -progress * (screenHeight * 0.25)
     }
 
-    init(analysisResult: ImageAnalysisResult, uiImage: UIImage?) {
+    init(analysisResult: ImageAnalysisResult, imageInfo: ImageInfo?, uiImage: UIImage?) {
         self._analysisResult = State(initialValue: analysisResult)
+        self.imageInfo = imageInfo
         self.uiImage = uiImage
     }
 
@@ -130,6 +134,7 @@ struct ImageDetailView: View {
                     isOpen: $isSheetOpen,
                     maxHeight: sheetMaxHeight,
                     analysisResult: analysisResult,
+                    imageInfo: imageInfo,
                     onRefresh: { await fetchLatestAnalysis() }
                 )
             }
@@ -172,6 +177,7 @@ struct MetadataSheet: View {
     @Binding var isOpen: Bool
     let maxHeight: CGFloat
     let analysisResult: ImageAnalysisResult
+    let imageInfo: ImageInfo?
     let onRefresh: () async -> Void
     
     // Collapsed state shows just the handle for easy grabbing
@@ -243,12 +249,42 @@ struct MetadataSheet: View {
                                         .font(.caption)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(Color.blue.opacity(0.2))
-                                        .foregroundStyle(.blue)
+                                        .background(Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.2)) // #10B981
+                                        .foregroundStyle(Color(red: 0.020, green: 0.588, blue: 0.412)) // #059669
                                         .clipShape(RoundedRectangle(cornerRadius: 16))
                                 }
                             }
                         }
+                    }
+                    
+                    // Location & Date Section (from image info)
+                    if let info = imageInfo, (info.hasLocation || info.creationDate != nil) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Creation Date
+                            if let dateString = info.formattedCreationDate {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "calendar")
+                                        .foregroundStyle(.orange)
+                                        .frame(width: 20)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Taken")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        Text(dateString)
+                                            .font(.subheadline)
+                                    }
+                                }
+                            }
+                            
+                            // Location Map Thumbnail
+                            if let lat = info.latitude, let lon = info.longitude {
+                                LocationMapThumbnail(latitude: lat, longitude: lon)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
                 .padding()
@@ -316,6 +352,144 @@ struct MetadataRow: View {
             Text(value)
                 .font(.body)
         }
+    }
+}
+
+// MARK: - Location Map Thumbnail
+
+struct LocationMapThumbnail: View {
+    let latitude: Double
+    let longitude: Double
+    
+    @State private var addressText: String?
+    @State private var resolvedMapItem: MKMapItem?
+    
+    private var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+    
+    private var region: MKCoordinateRegion {
+        MKCoordinateRegion(
+            center: coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Address text
+            if let address = addressText {
+                HStack(spacing: 8) {
+                    Image(systemName: "mappin.circle.fill")
+                        .foregroundStyle(Color(red: 0.063, green: 0.725, blue: 0.506))
+                        .font(.title3)
+                    Text(address)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            
+            // Map thumbnail
+            Button(action: openInAppleMaps) {
+                ZStack(alignment: .bottomLeading) {
+                    Map(initialPosition: .region(region)) {
+                        Marker("", coordinate: coordinate)
+                            .tint(.red)
+                    }
+                    .frame(height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .allowsHitTesting(false)
+                    
+                    // "Open in Maps" label overlay
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.forward.app")
+                            .font(.caption2)
+                        Text("Open in Maps")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial)
+                    .background(Color.black.opacity(0.3))
+                    .clipShape(Capsule())
+                    .padding(8)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .task {
+            await reverseGeocode()
+        }
+    }
+    
+    private func reverseGeocode() async {
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        
+        guard let request = MKReverseGeocodingRequest(location: location) else {
+            // Fallback to coordinates if request creation fails
+            addressText = String(format: "%.4f, %.4f", latitude, longitude)
+            return
+        }
+        
+        do {
+            let mapItems = try await request.mapItems
+            if let mapItem = mapItems.first {
+                resolvedMapItem = mapItem
+                addressText = formatAddress(from: mapItem)
+            } else {
+                addressText = String(format: "%.4f, %.4f", latitude, longitude)
+            }
+        } catch {
+            print("Reverse geocoding failed: \(error.localizedDescription)")
+            // Fallback to coordinates if geocoding fails
+            addressText = String(format: "%.4f, %.4f", latitude, longitude)
+        }
+    }
+    
+    private func formatAddress(from mapItem: MKMapItem) -> String {
+        var components: [String] = []
+        
+        // Use the map item's name if it's a point of interest
+        if let name = mapItem.name, !name.isEmpty {
+            // Check if name is different from short address
+            let shortAddr = mapItem.address?.shortAddress ?? ""
+            if name != shortAddr && !shortAddr.contains(name) {
+                components.append(name)
+            }
+        }
+        
+        // Use shortAddress from MKAddress
+        if let address = mapItem.address, let shortAddr = address.shortAddress, !shortAddr.isEmpty {
+            // If we already have a POI name, skip adding duplicate short address
+            if components.isEmpty || !shortAddr.contains(components[0]) {
+                components.append(shortAddr)
+            }
+        }
+        
+        if components.isEmpty {
+            return String(format: "%.4f, %.4f", latitude, longitude)
+        }
+        
+        return components.joined(separator: "\n")
+    }
+    
+    private func openInAppleMaps() {
+        let mapItem: MKMapItem
+        
+        if let resolved = resolvedMapItem {
+            mapItem = resolved
+        } else {
+            // Fallback: create map item with just location
+            mapItem = MKMapItem(location: CLLocation(latitude: latitude, longitude: longitude), address: nil)
+            mapItem.name = "Photo Location"
+        }
+        
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsMapTypeKey: MKMapType.standard.rawValue
+        ])
     }
 }
 

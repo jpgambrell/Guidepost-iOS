@@ -188,6 +188,55 @@ class ImageAPIService {
         }
     }
 
+    // MARK: - Fetch All Images (with location/date metadata)
+
+    func fetchAllImages() async throws -> [ImageInfo] {
+        guard let url = URL(string: "\(uploadServiceURL)/api/images") else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // Add authorization header
+        try await addAuthorizationHeader(to: &request)
+        
+        logRequest(request)
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+            
+            logResponse(httpResponse, data: data)
+
+            try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.httpError(statusCode: httpResponse.statusCode)
+            }
+
+            let decoder = JSONDecoder()
+            let listResponse = try decoder.decode(ImageInfoListResponse.self, from: data)
+
+            return listResponse.data
+        } catch let error as APIError {
+            throw error
+        } catch let error as DecodingError {
+            #if DEBUG
+            print("📷 Decoding Error: \(error)")
+            #endif
+            throw APIError.decodingError(error)
+        } catch {
+            #if DEBUG
+            print("📷 Network Error: \(error)")
+            #endif
+            throw APIError.networkError(error)
+        }
+    }
+
     // MARK: - Fetch All Analysis Results
 
     func fetchAllAnalysis() async throws -> [ImageAnalysisResult] {
@@ -322,6 +371,55 @@ class ImageAPIService {
             return data
         } catch let error as APIError {
             throw error
+        } catch {
+            #if DEBUG
+            print("📷 Network Error: \(error)")
+            #endif
+            throw APIError.networkError(error)
+        }
+    }
+
+    // MARK: - Fetch Image Info
+
+    func fetchImageInfo(id: String) async throws -> ImageInfo {
+        guard let url = URL(string: "\(uploadServiceURL)/api/images/\(id)/info") else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        // Add authorization header
+        try await addAuthorizationHeader(to: &request)
+        
+        logRequest(request)
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+            
+            logResponse(httpResponse, data: data)
+
+            try handleUnauthorizedIfNeeded(statusCode: httpResponse.statusCode)
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.httpError(statusCode: httpResponse.statusCode)
+            }
+
+            let decoder = JSONDecoder()
+            let infoResponse = try decoder.decode(ImageInfoResponse.self, from: data)
+
+            return infoResponse.data
+        } catch let error as APIError {
+            throw error
+        } catch let error as DecodingError {
+            #if DEBUG
+            print("📷 Decoding Error: \(error)")
+            #endif
+            throw APIError.decodingError(error)
         } catch {
             #if DEBUG
             print("📷 Network Error: \(error)")
