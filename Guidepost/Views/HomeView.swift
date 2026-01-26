@@ -262,7 +262,7 @@ struct HomeView: View {
                             try await viewModel.deleteImage(imageId)
                         } catch {
                             // If delete fails, remove from deletedImages to show it again
-                            withAnimation {
+                            _ = withAnimation {
                                 deletedImages.remove(imageId)
                             }
                             print("Failed to delete image: \(error.localizedDescription)")
@@ -324,22 +324,19 @@ struct ProfileButton: View {
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [.cyan, .blue],
+                        colors: [
+                            Color(red: 0.063, green: 0.725, blue: 0.506), // #10B981
+                            Color(red: 0.020, green: 0.588, blue: 0.412)  // #059669
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .frame(width: 36, height: 36)
             
-            if let user = user {
-                Text(user.givenName.prefix(1).uppercased())
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-            } else {
-                Image(systemName: "person.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white)
-            }
+            Image(systemName: "person.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.white)
         }
     }
 }
@@ -363,23 +360,20 @@ struct ProfileSheetView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [.cyan, .blue],
+                                    colors: [
+                                        Color(red: 0.063, green: 0.725, blue: 0.506), // #10B981
+                                        Color(red: 0.020, green: 0.588, blue: 0.412)  // #059669
+                                    ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .frame(width: 80, height: 80)
-                            .shadow(color: .cyan.opacity(0.4), radius: 10)
+                            .shadow(color: Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 10)
                         
-                        if let user = authViewModel.currentUser {
-                            Text(user.givenName.prefix(1).uppercased() + user.familyName.prefix(1).uppercased())
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
-                        } else {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 30))
-                                .foregroundStyle(.white)
-                        }
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.white)
                     }
                     
                     if let user = authViewModel.currentUser {
@@ -816,7 +810,10 @@ struct FloatingActionButton: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.blue.opacity(0.8), Color.blue.opacity(0.5)],
+                            colors: [
+                                Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.8), // #10B981
+                                Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.5)  // #059669
+                            ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -847,7 +844,7 @@ struct FloatingActionButton: View {
                     )
                     .background(
                         Circle()
-                            .fill(Color.blue.opacity(0.4))
+                            .fill(Color(red: 0.063, green: 0.725, blue: 0.506).opacity(0.4)) // #10B981
                             .frame(width: 50, height: 50)
                     )
 
@@ -856,7 +853,7 @@ struct FloatingActionButton: View {
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
             }
-            .shadow(color: .blue.opacity(0.4), radius: 12, x: 0, y: 6)
+            .shadow(color: Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 12, x: 0, y: 6) // #059669
             .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
         }
     }

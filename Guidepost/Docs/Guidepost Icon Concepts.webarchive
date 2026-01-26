@@ -1,0 +1,342 @@
+bplist00Ñ_WebMainResourceÕ	
+^WebResourceURL_WebResourceTextEncodingName_WebResourceData_WebResourceMIMEType_WebResourceFrameName_:file:///Users/john.gambrell/Downloads/guidepost-icons.htmlUUTF-8O?%<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guidepost Icon Concepts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 300;
+            font-size: 2.5rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 50px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .icon-card {
+            background: #252542;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .icon-card:hover {
+            transform: translateY(-5px);
+        }
+        .icon-container {
+            background: #fff;
+            border-radius: 24px;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .icon-container svg {
+            width: 100px;
+            height: 100px;
+        }
+        .icon-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #4ade80;
+        }
+        .icon-card p {
+            font-size: 0.85rem;
+            color: #999;
+            line-height: 1.5;
+        }
+        .dark-bg .icon-container {
+            background: #1a1a2e;
+        }
+        .section-title {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #4ade80;
+            margin: 50px 0 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Guidepost</h1>
+    <p class="subtitle">App Icon Concepts</p>
+
+    <div class="grid">
+        <!-- Icon 1: Classic Clean -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pole -->
+                    <rect x="46" y="25" width="8" height="60" rx="2" fill="#6B7280"></rect>
+                    <rect x="47" y="25" width="3" height="60" fill="#9CA3AF"></rect>
+                    <!-- Sign -->
+                    <path d="M20 35 L75 35 L85 45 L75 55 L20 55 Z" fill="#059669"></path>
+                    <path d="M20 35 L75 35 L85 45 L75 55 L20 55 Z" stroke="#047857" stroke-width="2"></path>
+                    <!-- Text -->
+                    <text x="45" y="49" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">GUIDEPOST</text>
+                    <!-- Cap -->
+                    <circle cx="50" cy="22" r="6" fill="#4B5563"></circle>
+                    <circle cx="50" cy="22" r="4" fill="#6B7280"></circle>
+                </svg>
+            </div>
+            <h3>1. Classic Clean</h3>
+            <p>Traditional signpost with your brand name. Simple and recognizable.</p>
+        </div>
+
+        <!-- Icon 2: Modern Minimal -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pole -->
+                    <rect x="47" y="30" width="6" height="50" rx="3" fill="#10B981"></rect>
+                    <!-- Sign -->
+                    <path d="M25 40 L70 40 L78 50 L70 60 L25 60 L25 40 Z" fill="#10B981"></path>
+                    <!-- Photo frame hint inside sign -->
+                    <rect x="32" y="45" width="12" height="10" rx="1" fill="white" fill-opacity="0.9"></rect>
+                    <rect x="34" y="47" width="8" height="6" fill="#059669"></rect>
+                    <!-- Mountain in photo -->
+                    <path d="M34 51 L37 48 L40 51 L42 49 L42 53 L34 53 Z" fill="#34D399"></path>
+                </svg>
+            </div>
+            <h3>2. Photo Memory</h3>
+            <p>Signpost with integrated photo frame. Shows the "capture memories" concept.</p>
+        </div>
+
+        <!-- Icon 3: Dual Arrow -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pole -->
+                    <rect x="46" y="20" width="8" height="65" rx="2" fill="#374151"></rect>
+                    <rect x="47" y="20" width="3" height="65" fill="#4B5563"></rect>
+                    <!-- Top sign pointing right -->
+                    <path d="M30 28 L72 28 L82 38 L72 48 L30 48 Z" fill="#10B981"></path>
+                    <path d="M30 28 L72 28 L82 38 L72 48 L30 48 Z" stroke="#059669" stroke-width="1.5"></path>
+                    <!-- Bottom sign pointing left -->
+                    <path d="M70 55 L28 55 L18 65 L28 75 L70 75 Z" fill="#34D399"></path>
+                    <path d="M70 55 L28 55 L18 65 L28 75 L70 75 Z" stroke="#10B981" stroke-width="1.5"></path>
+                    <!-- Cap -->
+                    <circle cx="50" cy="17" r="5" fill="#1F2937"></circle>
+                </svg>
+            </div>
+            <h3>3. Dual Direction</h3>
+            <p>Two arrows showing navigation both ways. Dynamic and balanced.</p>
+        </div>
+
+        <!-- Icon 4: Gradient Modern -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="signGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#34D399"></stop>
+                            <stop offset="100%" stop-color="#059669"></stop>
+                        </linearGradient>
+                        <linearGradient id="poleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#6B7280"></stop>
+                            <stop offset="100%" stop-color="#9CA3AF"></stop>
+                        </linearGradient>
+                    </defs>
+                    <!-- Pole with rounded ends -->
+                    <rect x="45" y="22" width="10" height="60" rx="5" fill="url(#poleGrad)"></rect>
+                    <!-- Sign -->
+                    <path d="M18 35 L73 35 L88 50 L73 65 L18 65 Q15 50 18 35 Z" fill="url(#signGrad)"></path>
+                    <!-- Subtle shine -->
+                    <path d="M18 35 L73 35 L88 50 L73 65 L18 65 Q15 50 18 35 Z" fill="white" fill-opacity="0.1"></path>
+                    <!-- Decorative lines -->
+                    <line x1="25" y1="45" x2="60" y2="45" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.8"></line>
+                    <line x1="25" y1="50" x2="55" y2="50" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.6"></line>
+                    <line x1="25" y1="55" x2="45" y2="55" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.4"></line>
+                </svg>
+            </div>
+            <h3>4. Gradient Modern</h3>
+            <p>Sleek gradient with abstract lines suggesting text/notes.</p>
+        </div>
+
+        <!-- Icon 5: Pin Hybrid -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Location pin shape -->
+                    <path d="M50 85 L30 55 Q20 40 30 28 Q40 16 50 16 Q60 16 70 28 Q80 40 70 55 Z" fill="#10B981"></path>
+                    <!-- Inner circle -->
+                    <circle cx="50" cy="40" r="18" fill="white"></circle>
+                    <!-- Arrow sign inside -->
+                    <path d="M35 35 L58 35 L65 40 L58 45 L35 45 Z" fill="#10B981"></path>
+                    <!-- Small pole detail -->
+                    <rect x="48" y="45" width="4" height="12" fill="#059669"></rect>
+                </svg>
+            </div>
+            <h3>5. Pin + Post Hybrid</h3>
+            <p>Location pin containing a signpost. Perfect for location-based memories.</p>
+        </div>
+
+        <!-- Icon 6: Rounded Friendly -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Soft pole -->
+                    <rect x="44" y="25" width="12" height="55" rx="6" fill="#9CA3AF"></rect>
+                    <!-- Friendly rounded sign -->
+                    <rect x="20" y="32" width="55" height="24" rx="12" fill="#10B981"></rect>
+                    <!-- Arrow tip -->
+                    <path d="M70 44 L85 44 L75 32 L75 56 L85 44 Z" fill="#10B981"></path>
+                    <!-- Cute camera icon -->
+                    <rect x="30" y="39" width="14" height="10" rx="2" fill="white"></rect>
+                    <circle cx="37" cy="44" r="3" fill="#10B981"></circle>
+                    <rect x="40" y="40" width="3" height="2" rx="1" fill="white"></rect>
+                    <!-- Cap ball -->
+                    <circle cx="50" cy="22" r="8" fill="#10B981"></circle>
+                </svg>
+            </div>
+            <h3>6. Friendly Camera</h3>
+            <p>Rounded, approachable style with camera icon. Fun and inviting.</p>
+        </div>
+
+        <!-- Icon 7: Minimal Line Art -->
+        <div class="icon-card dark-bg">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pole outline -->
+                    <line x1="50" y1="25" x2="50" y2="82" stroke="#10B981" stroke-width="4" stroke-linecap="round"></line>
+                    <!-- Sign outline -->
+                    <path d="M22 35 L70 35 L80 47 L70 59 L22 59" stroke="#10B981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+                    <!-- Cap -->
+                    <circle cx="50" cy="20" r="6" stroke="#10B981" stroke-width="4" fill="none"></circle>
+                </svg>
+            </div>
+            <h3>7. Line Art</h3>
+            <p>Minimal outline style. Works great on any background color.</p>
+        </div>
+
+        <!-- Icon 8: Bold Geometric -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Bold pole -->
+                    <rect x="42" y="20" width="16" height="65" fill="#1F2937"></rect>
+                    <!-- Bold sign -->
+                    <polygon points="15,30 72,30 90,50 72,70 15,70" fill="#10B981"></polygon>
+                    <!-- Inner cutout arrow -->
+                    <polygon points="25,40 60,40 70,50 60,60 25,60" fill="white"></polygon>
+                </svg>
+            </div>
+            <h3>8. Bold Cutout</h3>
+            <p>Strong, bold design with negative space arrow. Very app-icon friendly.</p>
+        </div>
+
+        <!-- Icon 9: 3D Style -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Shadow -->
+                    <ellipse cx="52" cy="85" rx="20" ry="5" fill="#E5E7EB"></ellipse>
+                    <!-- Pole back -->
+                    <rect x="48" y="25" width="8" height="58" fill="#4B5563"></rect>
+                    <!-- Pole front -->
+                    <rect x="44" y="25" width="8" height="58" fill="#6B7280"></rect>
+                    <!-- Sign shadow -->
+                    <path d="M22 42 L70 42 L80 52 L70 62 L22 62 Z" fill="#047857"></path>
+                    <!-- Sign front -->
+                    <path d="M20 38 L68 38 L78 48 L68 58 L20 58 Z" fill="#10B981"></path>
+                    <!-- Sign highlight -->
+                    <path d="M20 38 L68 38 L78 48 L68 48 L20 48 Z" fill="#34D399"></path>
+                    <!-- Cap -->
+                    <circle cx="48" cy="22" r="7" fill="#374151"></circle>
+                    <circle cx="46" cy="20" r="3" fill="#6B7280"></circle>
+                </svg>
+            </div>
+            <h3>9. Soft 3D</h3>
+            <p>Subtle 3D effect with depth. Friendly and modern.</p>
+        </div>
+
+        <!-- Icon 10: Camera Lens Post -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pole -->
+                    <rect x="46" y="50" width="8" height="35" rx="2" fill="#6B7280"></rect>
+                    <!-- Camera lens as sign holder -->
+                    <circle cx="50" cy="35" r="28" fill="#1F2937"></circle>
+                    <circle cx="50" cy="35" r="22" fill="#374151"></circle>
+                    <circle cx="50" cy="35" r="16" fill="#10B981"></circle>
+                    <circle cx="50" cy="35" r="10" fill="#059669"></circle>
+                    <circle cx="50" cy="35" r="5" fill="#1F2937"></circle>
+                    <!-- Lens flare -->
+                    <circle cx="42" cy="28" r="3" fill="white" fill-opacity="0.3"></circle>
+                    <!-- Arrow overlay -->
+                    <path d="M35 32 L55 32 L62 35 L55 38 L35 38 Z" fill="white" fill-opacity="0.9"></path>
+                </svg>
+            </div>
+            <h3>10. Lens Direction</h3>
+            <p>Camera lens with directional arrow. Photography meets navigation.</p>
+        </div>
+
+        <!-- Icon 11: Stacked Signs -->
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pole -->
+                    <rect x="46" y="15" width="8" height="70" rx="2" fill="#6B7280"></rect>
+                    <!-- Top sign - right -->
+                    <path d="M35 20 L68 20 L76 27 L68 34 L35 34 Z" fill="#059669"></path>
+                    <!-- Middle sign - left -->
+                    <path d="M65 40 L32 40 L24 47 L32 54 L65 54 Z" fill="#10B981"></path>
+                    <!-- Bottom sign - right -->
+                    <path d="M35 60 L68 60 L76 67 L68 74 L35 74 Z" fill="#34D399"></path>
+                    <!-- Cap -->
+                    <circle cx="50" cy="12" r="5" fill="#4B5563"></circle>
+                </svg>
+            </div>
+            <h3>11. Triple Stack</h3>
+            <p>Multiple directions like your reference. Shows variety of memories.</p>
+        </div>
+
+        <!-- Icon 12: App Icon Ready -->
+        <div class="icon-card">
+            <div class="icon-container" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 28px;">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Pole -->
+                    <rect x="46" y="25" width="8" height="55" rx="2" fill="white" fill-opacity="0.3"></rect>
+                    <!-- Sign -->
+                    <path d="M20 38 L70 38 L82 50 L70 62 L20 62 Z" fill="white"></path>
+                    <!-- Inner arrow -->
+                    <path d="M28 44 L58 44 L66 50 L58 56 L28 56 Z" fill="#059669"></path>
+                    <!-- Cap -->
+                    <circle cx="50" cy="22" r="6" fill="white"></circle>
+                </svg>
+            </div>
+            <h3>12. App Store Ready</h3>
+            <p>Full app icon with gradient background. Ready to ship!</p>
+        </div>
+    </div>
+
+
+
+</body></html>Ytext/htmlP    ( 7 U g } ” Ñ ×@ @
+                           @
