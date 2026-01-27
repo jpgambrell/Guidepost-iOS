@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(ImageGridViewModel.self) private var imageGridViewModel
     @Environment(AppearanceManager.self) private var appearanceManager
     
     var body: some View {
@@ -21,6 +22,12 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: authViewModel.isAuthenticated)
         .preferredColorScheme(appearanceManager.colorScheme)
+        .onChange(of: authViewModel.isAuthenticated) { wasAuthenticated, isAuthenticated in
+            // Clear all cached data when user signs out to prevent data leaking between users
+            if wasAuthenticated && !isAuthenticated {
+                imageGridViewModel.clearAllData()
+            }
+        }
     }
 }
 

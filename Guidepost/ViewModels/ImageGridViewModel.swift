@@ -16,7 +16,10 @@ class ImageGridViewModel {
     var imageCache: [String: UIImage] = [:]
     var errorMessage: String?
     var searchText = ""
-    var isLoading: Bool = true
+    var isLoading: Bool = true  // Start true so HomeView shows loading state initially
+    
+    /// Track whether initial load has been performed
+    private var hasPerformedInitialLoad = false
 
     private let apiService = ImageAPIService.shared
     private var loadTask: Task<Void, Never>?
@@ -33,10 +36,29 @@ class ImageGridViewModel {
     }
 
     init() {
-        // Load data once on initialization
-        loadTask = Task {
-            await loadAnalysisResults()
-        }
+        // Don't load data in init - wait for HomeView to appear
+        // This prevents race conditions when user isn't authenticated yet
+    }
+    
+    /// Load analysis results if not already loaded
+    /// Call this from HomeView.task to ensure user is authenticated first
+    func loadIfNeeded() async {
+        guard !hasPerformedInitialLoad else { return }
+        hasPerformedInitialLoad = true
+        await loadAnalysisResults()
+    }
+    
+    /// Clear all cached data - call this on sign out to prevent data leaking between users
+    func clearAllData() {
+        loadTask?.cancel()
+        loadTask = nil
+        analysisResults = []
+        imageInfoLookup = [:]
+        imageCache = [:]
+        errorMessage = nil
+        searchText = ""
+        isLoading = true  // Reset to initial state for next user
+        hasPerformedInitialLoad = false  // Allow fresh load for next user
     }
 
     func loadAnalysisResults() async {

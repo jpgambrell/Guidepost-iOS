@@ -281,6 +281,10 @@ struct HomeView: View {
         .onAppear {
             hapticFeedback.prepare()
         }
+        .task {
+            // Load data when HomeView appears (user is authenticated at this point)
+            await viewModel.loadIfNeeded()
+        }
     }
     
     // MARK: - Helper Functions
