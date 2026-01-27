@@ -198,7 +198,7 @@ struct MetadataSheet: View {
             // Drag handle area - larger hit target with more padding
             dragHandle
             
-            Divider()
+            //Divider()
             
             // Metadata content
             ScrollView {
@@ -287,8 +287,12 @@ struct MetadataSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
-                .padding()
+//                .padding(.horizontal)
+//                .padding(.bottom)
+//                .padding(.top, 0)
             }
+            .contentMargins(.top, 0, for: .scrollContent)
+           // .background(Color.orange) // DEBUG: Remove after testing
         }
         .frame(height: maxHeight)
         .background(
@@ -348,7 +352,7 @@ struct MetadataRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(.secondary)
+               // .foregroundStyle(.secondary)
             Text(value)
                 .font(.body)
         }
