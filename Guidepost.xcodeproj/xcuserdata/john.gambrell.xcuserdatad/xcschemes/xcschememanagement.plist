@@ -7,7 +7,25 @@
 		<key>Guidepost.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+		<key>GuidepostShare.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>C9C34DED2ED1043200BAD545</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>C9C448F52F29060400636AAA</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

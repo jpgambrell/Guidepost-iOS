@@ -18,10 +18,14 @@ private enum KeychainKey: String {
 }
 
 private struct KeychainHelper {
+    // Shared access group for keychain items - allows sharing between main app and share extension
+    private static let accessGroup = "group.com.gambrell.guidepost2026.shared"
+    
     static func save(_ data: Data, forKey key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
+            kSecAttrAccessGroup as String: accessGroup,
             kSecValueData as String: data
         ]
         
@@ -39,6 +43,7 @@ private struct KeychainHelper {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
+            kSecAttrAccessGroup as String: accessGroup,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
@@ -58,6 +63,38 @@ private struct KeychainHelper {
     }
     
     static func delete(forKey key: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecAttrAccessGroup as String: accessGroup
+        ]
+        
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
+    }
+    
+    // MARK: - Migration Helper
+    
+    /// Load data from old keychain (without access group) for migration
+    static func loadFromOldKeychain(forKey key: String) -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        if status == errSecSuccess {
+            return result as? Data
+        }
+        return nil
+    }
+    
+    /// Delete data from old keychain (without access group) after migration
+    static func deleteFromOldKeychain(forKey key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key
@@ -81,6 +118,51 @@ class AuthService {
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 60
         self.session = URLSession(configuration: config)
+        
+        // Migrate tokens from old keychain to shared keychain if needed
+        migrateTokensIfNeeded()
+    }
+    
+    // MARK: - Token Migration
+    
+    /// Migrate tokens from old keychain (pre-share extension) to shared keychain
+    /// This allows existing users to continue using the app after the update
+    private func migrateTokensIfNeeded() {
+        // Check if we already have tokens in the shared keychain
+        if currentIdToken != nil {
+            // Already migrated or fresh install
+            return
+        }
+        
+        // Try to load tokens from old keychain
+        let keysToMigrate = [
+            KeychainKey.accessToken.rawValue,
+            KeychainKey.idToken.rawValue,
+            KeychainKey.refreshToken.rawValue,
+            KeychainKey.tokenExpiration.rawValue
+        ]
+        
+        var migratedAny = false
+        
+        for key in keysToMigrate {
+            if let oldData = KeychainHelper.loadFromOldKeychain(forKey: key) {
+                // Save to new shared keychain
+                if KeychainHelper.save(oldData, forKey: key) {
+                    // Delete from old keychain
+                    _ = KeychainHelper.deleteFromOldKeychain(forKey: key)
+                    migratedAny = true
+                    #if DEBUG
+                    print("🔑 Migrated keychain item: \(key)")
+                    #endif
+                }
+            }
+        }
+        
+        if migratedAny {
+            #if DEBUG
+            print("🔑 Token migration completed successfully")
+            #endif
+        }
     }
     
     // MARK: - Token Management

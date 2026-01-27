@@ -35,6 +35,12 @@ struct GuidepostApp: App {
                     }
                 }
             }
+            .onOpenURL { url in
+                // Handle URL scheme from share extension (guidepost://)
+                // When user is not authenticated in share extension, they're redirected here
+                print("App opened via URL: \(url)")
+                // The app will already show sign-in if not authenticated via ContentView logic
+            }
         }
     }
 }

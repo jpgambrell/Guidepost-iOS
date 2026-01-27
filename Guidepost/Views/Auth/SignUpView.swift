@@ -179,10 +179,19 @@ struct SignUpView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.theme.accentGradient())
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.063, green: 0.725, blue: 0.506), // #10B981
+                                        Color(red: 0.020, green: 0.588, blue: 0.412)  // #059669
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .shadow(color: .cyan.opacity(0.4), radius: 15, x: 0, y: 8)
+                            .shadow(color: Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 15, x: 0, y: 8)
                         }
                         .disabled(authViewModel.isLoading)
                         .padding(.top, 8)

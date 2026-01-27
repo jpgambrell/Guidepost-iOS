@@ -80,7 +80,6 @@ struct AuthAPIResponse<T: Codable>: Codable {
 
 struct SignUpResponseData: Codable {
     let userId: String
-    let confirmed: Bool
     let message: String?
 }
 

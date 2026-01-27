@@ -287,12 +287,7 @@ struct MetadataSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
-//                .padding(.horizontal)
-//                .padding(.bottom)
-//                .padding(.top, 0)
             }
-            .contentMargins(.top, 0, for: .scrollContent)
-           // .background(Color.orange) // DEBUG: Remove after testing
         }
         .frame(height: maxHeight)
         .background(
@@ -352,7 +347,6 @@ struct MetadataRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.headline)
-               // .foregroundStyle(.secondary)
             Text(value)
                 .font(.body)
         }
