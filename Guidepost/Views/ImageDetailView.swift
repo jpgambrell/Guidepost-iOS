@@ -287,6 +287,7 @@ struct MetadataSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
+                .padding(.horizontal)
             }
         }
         .frame(height: maxHeight)

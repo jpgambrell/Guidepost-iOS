@@ -67,6 +67,9 @@ class ImageGridViewModel {
 
         errorMessage = nil
         isLoading = true
+        
+        // Keep track of local placeholders (processing images not yet on server)
+        let localPlaceholders = analysisResults.filter { $0.status == .processing }
 
         loadTask = Task {
             do {
@@ -77,9 +80,25 @@ class ImageGridViewModel {
                 let (results, images) = try await (analysisTask, imagesTask)
                 
                 if !Task.isCancelled {
-                    analysisResults = results
+                    // Build set of server image IDs for quick lookup
+                    let serverImageIds = Set(results.map { $0.imageId })
+                    
+                    // Keep local placeholders that aren't in the server response yet
+                    let orphanedPlaceholders = localPlaceholders.filter { !serverImageIds.contains($0.imageId) }
+                    
+                    // Merge: server results + orphaned placeholders (placeholders at the beginning)
+                    analysisResults = orphanedPlaceholders + results
+                    
                     // Build lookup dictionary for image info (location/date)
-                    imageInfoLookup = Dictionary(uniqueKeysWithValues: images.map { ($0.id, $0) })
+                    // Preserve local image info for orphaned placeholders
+                    var newLookup = Dictionary(uniqueKeysWithValues: images.map { ($0.id, $0) })
+                    for placeholder in orphanedPlaceholders {
+                        if let existingInfo = imageInfoLookup[placeholder.imageId] {
+                            newLookup[placeholder.imageId] = existingInfo
+                        }
+                    }
+                    imageInfoLookup = newLookup
+                    
                     isLoading = false
                 }
             } catch {
@@ -118,9 +137,23 @@ class ImageGridViewModel {
 
     func uploadImage(_ image: UIImage, metadata: ImageMetadata? = nil) async throws -> UploadedImage {
         let uploadedImage = try await apiService.uploadImage(image, metadata: metadata)
+        
+        // Immediately add placeholder to show the image right away
+        let placeholder = ImageAnalysisResult(placeholder: uploadedImage)
+        let imageInfo = ImageInfo(from: uploadedImage, metadata: metadata)
+        
+        // Insert at the beginning of the list so it appears first
+        analysisResults.insert(placeholder, at: 0)
+        imageInfoLookup[uploadedImage.id] = imageInfo
         imageCache[uploadedImage.id] = image
-        // Refresh analysis results after upload to show new image once analyzed
-        await loadAnalysisResults()
+        
+        // Schedule a background refresh to get the actual server data
+        // Use a small delay to allow the server to process the upload
+        Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            await loadAnalysisResults()
+        }
+        
         return uploadedImage
     }
 

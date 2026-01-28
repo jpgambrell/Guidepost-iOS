@@ -169,6 +169,28 @@ struct ImageInfo: Codable, Identifiable {
         creationDate = try container.decodeIfPresent(String.self, forKey: .creationDate)
     }
     
+    /// Create ImageInfo from an uploaded image and optional metadata
+    init(from uploadedImage: UploadedImage, metadata: ImageMetadata?) {
+        self.id = uploadedImage.id
+        self.userId = uploadedImage.userId
+        self.filename = uploadedImage.filename
+        self.originalName = uploadedImage.originalName
+        self.mimetype = uploadedImage.mimetype
+        self.size = uploadedImage.size
+        self.uploadedAt = uploadedImage.uploadedAt
+        self.path = uploadedImage.path
+        self.status = "processing"
+        self.latitude = metadata?.latitude
+        self.longitude = metadata?.longitude
+        if let date = metadata?.creationDate {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            self.creationDate = formatter.string(from: date)
+        } else {
+            self.creationDate = nil
+        }
+    }
+    
     var hasLocation: Bool {
         latitude != nil && longitude != nil
     }
@@ -269,6 +291,19 @@ struct ImageAnalysisResult: Codable, Identifiable, Hashable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         status = try container.decode(AnalysisStatus.self, forKey: .status)
         error = try container.decodeIfPresent(String.self, forKey: .error)
+    }
+    
+    /// Create a placeholder analysis result for a newly uploaded image
+    init(placeholder uploadedImage: UploadedImage) {
+        self.imageId = uploadedImage.id
+        self.userId = uploadedImage.userId
+        self.filename = uploadedImage.filename
+        self.analyzedAt = uploadedImage.uploadedAt
+        self.keywords = nil
+        self.detectedText = nil
+        self.description = nil
+        self.status = .processing
+        self.error = nil
     }
 
     var id: String { imageId }
