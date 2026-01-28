@@ -10,6 +10,7 @@ import MapKit
 import SwiftUI
 
 struct ImageDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @State private var analysisResult: ImageAnalysisResult
     let imageInfo: ImageInfo?  // Passed in from HomeView (no fetch needed)
     let uiImage: UIImage?
@@ -55,8 +56,8 @@ struct ImageDetailView: View {
             let sheetMaxHeight = screenHeight * 0.7
             
             ZStack(alignment: .bottom) {
-                // Background
-                Color.black.ignoresSafeArea()
+                // Background - adapts to light/dark mode
+                (colorScheme == .dark ? Color.black : Color.white).ignoresSafeArea()
 
                 // Image layer with TikTok-style scaling
                 if let uiImage = uiImage {
