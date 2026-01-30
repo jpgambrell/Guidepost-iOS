@@ -352,6 +352,9 @@ struct ProfileSheetView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(AppearanceManager.self) private var appearanceManager
     @State private var showLogoutConfirmation = false
+    @State private var showDeleteAccountConfirmation = false
+    @State private var showUpgradeSheet = false
+    @State private var isDeleting = false
     
     var body: some View {
         @Bindable var appearanceManager = appearanceManager
@@ -364,7 +367,10 @@ struct ProfileSheetView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [
+                                    colors: authViewModel.isGuest ? [
+                                        Color.gray,
+                                        Color.gray.opacity(0.7)
+                                    ] : [
                                         Color(red: 0.063, green: 0.725, blue: 0.506), // #10B981
                                         Color(red: 0.020, green: 0.588, blue: 0.412)  // #059669
                                     ],
@@ -373,14 +379,36 @@ struct ProfileSheetView: View {
                                 )
                             )
                             .frame(width: 80, height: 80)
-                            .shadow(color: Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 10)
+                            .shadow(color: authViewModel.isGuest ? Color.gray.opacity(0.4) : Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 10)
                         
-                        Image(systemName: "person.fill")
+                        Image(systemName: authViewModel.isGuest ? "person.fill.questionmark" : "person.fill")
                             .font(.system(size: 30))
                             .foregroundStyle(.white)
                     }
                     
-                    if let user = authViewModel.currentUser {
+                    if authViewModel.isGuest {
+                        VStack(spacing: 4) {
+                            Text("Guest User")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Text("\(authViewModel.remainingGuestUploads) uploads remaining")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            
+                            Text("Trial Mode")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.orange)
+                                )
+                                .padding(.top, 4)
+                        }
+                    } else if let user = authViewModel.currentUser {
                         VStack(spacing: 4) {
                             Text(user.fullName)
                                 .font(.title2)
@@ -465,6 +493,46 @@ struct ProfileSheetView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)
                     
+                    // Upgrade Account button (for guests only)
+                    if authViewModel.isGuest {
+                        Button(action: { showUpgradeSheet = true }) {
+                            HStack {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.system(size: 18))
+                                    .frame(width: 28)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Upgrade to Full Account")
+                                        .fontWeight(.medium)
+                                    Text("Keep your images and unlock unlimited uploads")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.8))
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
+                            .foregroundStyle(.white)
+                            .padding()
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.063, green: 0.725, blue: 0.506), // #10B981
+                                        Color(red: 0.020, green: 0.588, blue: 0.412)  // #059669
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    // Sign Out button
                     Button(action: { showLogoutConfirmation = true }) {
                         HStack {
                             Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -480,11 +548,40 @@ struct ProfileSheetView: View {
                                 .font(.system(size: 14))
                                 .foregroundStyle(.secondary)
                         }
+                        .foregroundStyle(.primary)
+                        .padding()
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal)
+                    
+                    // Delete Account button
+                    Button(action: { showDeleteAccountConfirmation = true }) {
+                        HStack {
+                            if isDeleting {
+                                ProgressView()
+                                    .frame(width: 28)
+                            } else {
+                                Image(systemName: "trash.fill")
+                                    .font(.system(size: 18))
+                                    .frame(width: 28)
+                            }
+                            
+                            Text("Delete Account")
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                        }
                         .foregroundStyle(.red)
                         .padding()
                         .background(Color.red.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .disabled(isDeleting)
                     .padding(.horizontal)
                 }
                 
@@ -517,6 +614,263 @@ struct ProfileSheetView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to sign out?")
+            }
+            .confirmationDialog(
+                "Delete Account",
+                isPresented: $showDeleteAccountConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Account", role: .destructive) {
+                    isDeleting = true
+                    Task {
+                        await authViewModel.deleteAccount()
+                        await MainActor.run {
+                            isDeleting = false
+                            dismiss()
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This action cannot be undone. Your account and all associated data (images, analysis results) will be permanently deleted.")
+            }
+            .sheet(isPresented: $showUpgradeSheet) {
+                UpgradeAccountView()
+            }
+        }
+    }
+}
+
+// MARK: - Upgrade Account View
+
+struct UpgradeAccountView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var authViewModel
+    @FocusState private var focusedField: Field?
+    
+    private enum Field: Hashable {
+        case email, password, confirmPassword, firstName, lastName
+    }
+    
+    @State private var email = ""
+    @State private var password = ""
+    @State private var confirmPassword = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var isUpgrading = false
+    @State private var errorMessage: String?
+    @State private var showSuccessAlert = false
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.063, green: 0.725, blue: 0.506),
+                                            Color(red: 0.020, green: 0.588, blue: 0.412)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 70, height: 70)
+                            
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 30))
+                                .foregroundStyle(.white)
+                        }
+                        
+                        Text("Upgrade Your Account")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text("Create login credentials to keep your images and unlock unlimited uploads.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 20)
+                    
+                    // Error message
+                    if let error = errorMessage {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                            Text(error)
+                                .font(.callout)
+                                .foregroundStyle(.red)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.red.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal)
+                    }
+                    
+                    // Form fields
+                    VStack(spacing: 16) {
+                        // Name fields
+                        HStack(spacing: 12) {
+                            AuthTextField(
+                                icon: "person.fill",
+                                placeholder: "First Name",
+                                text: $firstName
+                            )
+                            .focused($focusedField, equals: .firstName)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .lastName }
+                            
+                            AuthTextField(
+                                icon: "person.fill",
+                                placeholder: "Last Name",
+                                text: $lastName
+                            )
+                            .focused($focusedField, equals: .lastName)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .email }
+                        }
+                        
+                        AuthTextField(
+                            icon: "envelope.fill",
+                            placeholder: "Email",
+                            text: $email,
+                            keyboardType: .emailAddress,
+                            textContentType: .emailAddress
+                        )
+                        .focused($focusedField, equals: .email)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .password }
+                        
+                        AuthSecureField(
+                            icon: "lock.fill",
+                            placeholder: "Password",
+                            text: $password
+                        )
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .confirmPassword }
+                        
+                        AuthSecureField(
+                            icon: "lock.fill",
+                            placeholder: "Confirm Password",
+                            text: $confirmPassword
+                        )
+                        .focused($focusedField, equals: .confirmPassword)
+                        .submitLabel(.done)
+                        .onSubmit { upgradeAccount() }
+                        
+                        Text("Password must be at least 8 characters with uppercase, lowercase, number, and special character.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal)
+                    
+                    // Upgrade button
+                    Button(action: upgradeAccount) {
+                        HStack {
+                            if isUpgrading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Text("Upgrade Account")
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.063, green: 0.725, blue: 0.506),
+                                    Color(red: 0.020, green: 0.588, blue: 0.412)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .shadow(color: Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 15, x: 0, y: 8)
+                    }
+                    .disabled(isUpgrading)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    
+                    Spacer()
+                }
+            }
+            .navigationTitle("Upgrade Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+            .alert("Account Upgraded!", isPresented: $showSuccessAlert) {
+                Button("OK") {
+                    dismiss()
+                }
+            } message: {
+                Text("Your account has been upgraded. You now have unlimited uploads!")
+            }
+        }
+    }
+    
+    private func upgradeAccount() {
+        // Validation
+        guard !firstName.isEmpty else {
+            errorMessage = "Please enter your first name"
+            return
+        }
+        guard !lastName.isEmpty else {
+            errorMessage = "Please enter your last name"
+            return
+        }
+        guard !email.isEmpty else {
+            errorMessage = "Please enter your email"
+            return
+        }
+        guard !password.isEmpty else {
+            errorMessage = "Please enter a password"
+            return
+        }
+        guard password.count >= 8 else {
+            errorMessage = "Password must be at least 8 characters"
+            return
+        }
+        guard password == confirmPassword else {
+            errorMessage = "Passwords do not match"
+            return
+        }
+        
+        isUpgrading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                try await authViewModel.upgradeGuestAccount(
+                    email: email,
+                    password: password,
+                    givenName: firstName,
+                    familyName: lastName
+                )
+                await MainActor.run {
+                    isUpgrading = false
+                    showSuccessAlert = true
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isUpgrading = false
+                }
             }
         }
     }

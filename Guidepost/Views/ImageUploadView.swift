@@ -65,6 +65,7 @@ class CameraLocationManager: NSObject, CLLocationManagerDelegate {
 struct ImageUploadView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(ImageGridViewModel.self) private var viewModel
+    @Environment(AuthViewModel.self) private var authViewModel
 
     @State private var selectedImage: UIImage?
     @State private var selectedMetadata: ImageMetadata?
@@ -76,6 +77,7 @@ struct ImageUploadView: View {
     @State private var showPermissionAlert = false
     @State private var showPhotoPermissionAlert = false
     @State private var showLocationPermissionAlert = false
+    @State private var showGuestLimitAlert = false
     
     @State private var locationManager = CameraLocationManager()
 
@@ -143,6 +145,18 @@ struct ImageUploadView: View {
                 }
 
                 Spacer()
+                
+                // Guest upload limit info
+                if authViewModel.isGuest {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.orange)
+                        Text("\(authViewModel.remainingGuestUploads) free upload\(authViewModel.remainingGuestUploads == 1 ? "" : "s") remaining")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal)
+                }
                 
                 // Upload button pinned to bottom
                 if selectedImage != nil {
@@ -241,12 +255,29 @@ struct ImageUploadView: View {
             } message: {
                 Text("Location access is recommended to capture where your photos were taken. You can enable it in Settings.")
             }
+            .alert("Upload Limit Reached", isPresented: $showGuestLimitAlert) {
+                Button("Create Account") {
+                    // Sign out guest account and navigate to sign up
+                    authViewModel.signOut()
+                    authViewModel.navigateToSignUp()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You've used all 10 free uploads. Create an account to continue uploading unlimited images.")
+            }
 
         }
     }
 
     private func uploadImage() {
         guard let image = selectedImage else { return }
+        
+        // Check guest upload limit
+        if authViewModel.isGuest && !authViewModel.canGuestUpload {
+            showGuestLimitAlert = true
+            return
+        }
 
         isUploading = true
         uploadError = nil
@@ -254,6 +285,8 @@ struct ImageUploadView: View {
         Task {
             do {
                 _ = try await viewModel.uploadImage(image, metadata: selectedMetadata)
+                // Increment guest upload count on success
+                authViewModel.incrementGuestUploadCount()
                 showSuccessMessage = true
             } catch {
                 uploadError = error.localizedDescription

@@ -41,6 +41,26 @@ class AuthViewModel {
     var confirmationCode: String = ""
     var newPassword: String = ""
     
+    // Guest account state
+    var isGuest: Bool = false
+    
+    // Guest upload tracking (stored in UserDefaults)
+    private let guestUploadCountKey = "com.guidepost.guestUploadCount"
+    private let maxGuestUploads = 10
+    
+    var guestUploadCount: Int {
+        get { UserDefaults.standard.integer(forKey: guestUploadCountKey) }
+        set { UserDefaults.standard.set(newValue, forKey: guestUploadCountKey) }
+    }
+    
+    var canGuestUpload: Bool {
+        !isGuest || guestUploadCount < maxGuestUploads
+    }
+    
+    var remainingGuestUploads: Int {
+        max(0, maxGuestUploads - guestUploadCount)
+    }
+    
     // MARK: - Private
     
     private let authService = AuthService.shared
@@ -56,6 +76,7 @@ class AuthViewModel {
     
     func checkAuthStatus() {
         isAuthenticated = authService.isAuthenticated
+        isGuest = authService.isGuestAccount
         
         if isAuthenticated {
             // Fetch user profile in background
@@ -288,10 +309,126 @@ class AuthViewModel {
     
     func signOut() {
         authService.clearTokens()
+        authService.clearGuestFlags()
         isAuthenticated = false
+        isGuest = false
         currentUser = nil
+        // Reset guest upload count on sign out
+        guestUploadCount = 0
         clearFormFields()
         authFlowState = .signIn
+    }
+    
+    // MARK: - Try as Guest
+    
+    func tryAsGuest() async {
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+        
+        do {
+            _ = try await authService.createGuestAccount()
+            
+            await MainActor.run {
+                self.isAuthenticated = true
+                self.isGuest = true
+                self.guestUploadCount = 0
+                self.isLoading = false
+            }
+            
+            // Try to fetch user profile (non-blocking)
+            do {
+                let user = try await authService.getMe()
+                await MainActor.run {
+                    self.currentUser = user
+                }
+            } catch {
+                #if DEBUG
+                print("⚠️ Failed to fetch guest user profile: \(error.localizedDescription)")
+                #endif
+            }
+        } catch let error as AuthError {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+            }
+        }
+    }
+    
+    // MARK: - Delete Account
+    
+    func deleteAccount() async {
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+        
+        do {
+            try await authService.deleteAccount()
+            
+            await MainActor.run {
+                self.isAuthenticated = false
+                self.isGuest = false
+                self.currentUser = nil
+                self.guestUploadCount = 0
+                self.clearFormFields()
+                self.authFlowState = .signIn
+                self.isLoading = false
+            }
+        } catch let error as AuthError {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+            }
+        }
+    }
+    
+    // MARK: - Upgrade Guest Account
+    
+    func upgradeGuestAccount(email: String, password: String, givenName: String, familyName: String) async throws {
+        try await authService.upgradeGuestAccount(
+            email: email,
+            password: password,
+            givenName: givenName,
+            familyName: familyName
+        )
+        
+        // Update local state
+        await MainActor.run {
+            self.isGuest = false
+            self.guestUploadCount = 0
+        }
+        
+        // Fetch updated user profile
+        do {
+            let user = try await authService.getMe()
+            await MainActor.run {
+                self.currentUser = user
+            }
+        } catch {
+            #if DEBUG
+            print("⚠️ Failed to fetch user profile after upgrade: \(error.localizedDescription)")
+            #endif
+        }
+    }
+    
+    // MARK: - Guest Upload Tracking
+    
+    func incrementGuestUploadCount() {
+        if isGuest {
+            guestUploadCount += 1
+        }
     }
     
     // MARK: - Navigation Helpers

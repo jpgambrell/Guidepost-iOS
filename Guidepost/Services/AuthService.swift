@@ -15,6 +15,9 @@ private enum KeychainKey: String {
     case idToken = "com.guidepost.idToken"
     case refreshToken = "com.guidepost.refreshToken"
     case tokenExpiration = "com.guidepost.tokenExpiration"
+    case isGuestAccount = "com.guidepost.isGuestAccount"
+    case guestEmail = "com.guidepost.guestEmail"
+    case guestPassword = "com.guidepost.guestPassword"
 }
 
 private struct KeychainHelper {
@@ -301,6 +304,110 @@ class AuthService {
         return token
     }
     
+    // MARK: - Guest Account
+    
+    /// Check if current account is a guest account
+    var isGuestAccount: Bool {
+        KeychainHelper.loadString(forKey: KeychainKey.isGuestAccount.rawValue) == "true"
+    }
+    
+    /// Create a silent guest account with random credentials
+    func createGuestAccount() async throws -> AuthTokens {
+        let guestId = UUID().uuidString.lowercased()
+        let guestEmail = "guest_\(guestId)@guidepost.guest"
+        let guestPassword = generateSecurePassword()
+        
+        // Sign up with guest credentials
+        _ = try await signUp(
+            email: guestEmail,
+            password: guestPassword,
+            givenName: "Guest",
+            familyName: "User"
+        )
+        
+        // Sign in immediately
+        let tokens = try await signIn(email: guestEmail, password: guestPassword)
+        
+        // Mark as guest account and store credentials for potential re-auth
+        _ = KeychainHelper.save("true", forKey: KeychainKey.isGuestAccount.rawValue)
+        _ = KeychainHelper.save(guestEmail, forKey: KeychainKey.guestEmail.rawValue)
+        _ = KeychainHelper.save(guestPassword, forKey: KeychainKey.guestPassword.rawValue)
+        
+        return tokens
+    }
+    
+    /// Generate a secure random password that meets Cognito requirements
+    private func generateSecurePassword() -> String {
+        let lowercase = "abcdefghijklmnopqrstuvwxyz"
+        let uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let digits = "0123456789"
+        let special = "!@#$%^&*"
+        
+        // Ensure at least one of each required character type
+        var password = ""
+        password += String(lowercase.randomElement()!)
+        password += String(uppercase.randomElement()!)
+        password += String(digits.randomElement()!)
+        password += String(special.randomElement()!)
+        
+        // Fill remaining with random characters from all sets
+        let allChars = lowercase + uppercase + digits + special
+        for _ in 0..<12 {
+            password += String(allChars.randomElement()!)
+        }
+        
+        // Shuffle the password
+        return String(password.shuffled())
+    }
+    
+    /// Clear guest account flags
+    func clearGuestFlags() {
+        _ = KeychainHelper.delete(forKey: KeychainKey.isGuestAccount.rawValue)
+        _ = KeychainHelper.delete(forKey: KeychainKey.guestEmail.rawValue)
+        _ = KeychainHelper.delete(forKey: KeychainKey.guestPassword.rawValue)
+    }
+    
+    /// PATCH /api/auth/upgrade - Upgrade guest account to full account
+    func upgradeGuestAccount(email: String, password: String, givenName: String, familyName: String) async throws {
+        let request = UpgradeAccountRequest(
+            email: email,
+            password: password,
+            givenName: givenName,
+            familyName: familyName
+        )
+        
+        let response: AuthAPIResponse<UpgradeAccountResponseData> = try await patch(
+            endpoint: "/api/auth/upgrade",
+            body: request,
+            authenticated: true
+        )
+        
+        guard response.success, let tokens = response.data?.tokens else {
+            throw mapError(response.error, statusCode: nil)
+        }
+        
+        // Save new tokens
+        saveTokens(tokens)
+        
+        // Clear guest flags since we're now a full account
+        clearGuestFlags()
+    }
+    
+    // MARK: - Account Deletion
+    
+    /// DELETE /api/auth/me - Delete the current user's account
+    func deleteAccount() async throws {
+        let response: AuthAPIResponse<DeleteAccountResponseData> = try await delete(endpoint: "/api/auth/me", authenticated: true)
+        
+        guard response.success else {
+            throw mapError(response.error, statusCode: nil)
+        }
+        
+        // Clear all local data after successful deletion
+        clearTokens()
+        clearGuestFlags()
+    }
+    
     // MARK: - HTTP Helpers
     
     private func post<T: Codable, R: Codable>(endpoint: String, body: T) async throws -> R {
@@ -333,6 +440,42 @@ class AuthService {
             }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
+        
+        return try await performRequest(request)
+    }
+    
+    private func delete<R: Codable>(endpoint: String, authenticated: Bool) async throws -> R {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            throw AuthError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        if authenticated {
+            let token = try await ensureValidToken()
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        return try await performRequest(request)
+    }
+    
+    private func patch<T: Codable, R: Codable>(endpoint: String, body: T, authenticated: Bool) async throws -> R {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            throw AuthError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if authenticated {
+            let token = try await ensureValidToken()
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let encoder = JSONEncoder()
+        request.httpBody = try encoder.encode(body)
         
         return try await performRequest(request)
     }

@@ -145,6 +145,32 @@ struct SignInView: View {
                             }
                             .disabled(authViewModel.isLoading)
                             .padding(.top, 8)
+                            
+                            // Try the App button (Guest mode)
+                            Button(action: {
+                                Task { await authViewModel.tryAsGuest() }
+                            }) {
+                                HStack {
+                                    Image(systemName: "sparkles")
+                                    Text("Try the App")
+                                        .fontWeight(.medium)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.theme.inputBackground)
+                                .foregroundStyle(Color.theme.textPrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.theme.inputBorder, lineWidth: 1)
+                                )
+                            }
+                            .disabled(authViewModel.isLoading)
+                            
+                            Text("Try with 10 free uploads, no sign-up required")
+                                .font(.caption)
+                                .foregroundStyle(Color.theme.textSecondary)
+                                .multilineTextAlignment(.center)
                         }
                         .padding(.horizontal, 24)
                         

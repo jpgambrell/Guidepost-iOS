@@ -91,6 +91,22 @@ struct ConfirmResponseData: Codable {
     let message: String?
 }
 
+struct DeleteAccountResponseData: Codable {
+    let message: String?
+}
+
+struct UpgradeAccountRequest: Codable {
+    let email: String
+    let password: String
+    let givenName: String
+    let familyName: String
+}
+
+struct UpgradeAccountResponseData: Codable {
+    let message: String?
+    let tokens: AuthTokens?
+}
+
 // MARK: - Auth Errors
 
 enum AuthError: Error, LocalizedError {
