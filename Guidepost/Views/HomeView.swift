@@ -756,6 +756,20 @@ struct UpgradeAccountView: View {
                         .submitLabel(.next)
                         .onSubmit { focusedField = .confirmPassword }
                         
+                        // Password requirements hint
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Password must contain:")
+                                .font(.caption)
+                                .foregroundStyle(Color.theme.textSecondary)
+                            HStack(spacing: 16) {
+                                PasswordRequirement(text: "8+ chars", met: password.count >= 8)
+                                PasswordRequirement(text: "Uppercase", met: password.contains(where: { $0.isUppercase }))
+                                PasswordRequirement(text: "Number", met: password.contains(where: { $0.isNumber }))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
+                        
                         AuthSecureField(
                             icon: "lock.fill",
                             placeholder: "Confirm Password",
@@ -765,9 +779,17 @@ struct UpgradeAccountView: View {
                         .submitLabel(.done)
                         .onSubmit { upgradeAccount() }
                         
-                        Text("Password must be at least 8 characters with uppercase, lowercase, number, and special character.")
+                        // Password match indicator
+                        if !confirmPassword.isEmpty {
+                            HStack {
+                                Image(systemName: password == confirmPassword ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                Text(password == confirmPassword ? "Passwords match" : "Passwords don't match")
+                            }
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(password == confirmPassword ? .green : .red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4)
+                        }
                     }
                     .padding(.horizontal)
                     
