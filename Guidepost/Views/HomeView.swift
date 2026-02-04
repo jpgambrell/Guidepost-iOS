@@ -499,7 +499,8 @@ struct ProfileSheetView: View {
                     SubscriptionStatusRow(
                         plan: storeKitService.currentPlan,
                         expirationDate: storeKitService.subscriptionStatus.expirationDate,
-                        remainingUploads: authViewModel.remainingTrialUploads
+                        remainingUploads: authViewModel.remainingTrialUploads,
+                        willRenew: storeKitService.subscriptionStatus.willRenew
                     )
                     .padding(.horizontal)
                     
@@ -734,6 +735,15 @@ struct SubscriptionStatusRow: View {
     let plan: SubscriptionPlan
     let expirationDate: Date?
     let remainingUploads: Int
+    let willRenew: Bool
+    
+    // Convenience initializer with default willRenew
+    init(plan: SubscriptionPlan, expirationDate: Date?, remainingUploads: Int, willRenew: Bool = true) {
+        self.plan = plan
+        self.expirationDate = expirationDate
+        self.remainingUploads = remainingUploads
+        self.willRenew = willRenew
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -754,25 +764,44 @@ struct SubscriptionStatusRow: View {
                             .font(.caption)
                             .foregroundStyle(remainingUploads > 3 ? Color.theme.textSecondary : .orange)
                     } else if let date = expirationDate {
-                        Text("Renews \(date.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.caption)
-                            .foregroundStyle(Color.theme.textSecondary)
+                        if willRenew {
+                            Text("Renews \(date.formatted(date: .abbreviated, time: .omitted))")
+                                .font(.caption)
+                                .foregroundStyle(Color.theme.textSecondary)
+                        } else {
+                            Text("Expires \(date.formatted(date: .abbreviated, time: .omitted))")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
                     }
                 }
                 
                 Spacer()
                 
                 // Plan badge
-                Text(plan == .pro ? "Active" : "Free")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule()
-                            .fill(plan == .pro ? Color.green : Color.orange)
-                    )
+                if plan == .pro {
+                    Text(willRenew ? "Active" : "Cancelled")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule()
+                                .fill(willRenew ? Color.green : Color.orange)
+                        )
+                } else {
+                    Text("Free")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule()
+                                .fill(Color.orange)
+                        )
+                }
             }
         }
         .padding()

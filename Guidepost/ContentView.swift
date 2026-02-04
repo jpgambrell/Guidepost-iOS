@@ -11,6 +11,7 @@ struct ContentView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(ImageGridViewModel.self) private var imageGridViewModel
     @Environment(AppearanceManager.self) private var appearanceManager
+    @Environment(StoreKitService.self) private var storeKitService
     
     var body: some View {
         Group {
@@ -22,10 +23,31 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: authViewModel.isAuthenticated)
         .preferredColorScheme(appearanceManager.colorScheme)
+        .task {
+            // Check subscription status on app launch for non-guest authenticated users
+            if authViewModel.isAuthenticated && !authViewModel.isGuest {
+                await storeKitService.checkSubscriptionStatus()
+            }
+        }
         .onChange(of: authViewModel.isAuthenticated) { wasAuthenticated, isAuthenticated in
-            // Clear all cached data when user signs out to prevent data leaking between users
             if wasAuthenticated && !isAuthenticated {
+                // User signed out - clear all cached data to prevent data leaking between users
                 imageGridViewModel.clearAllData()
+                storeKitService.resetSubscriptionStatus()
+            } else if !wasAuthenticated && isAuthenticated && !authViewModel.isGuest {
+                // Non-guest user signed in - re-check subscription status
+                // Guests always start on Trial (they must create account before subscribing)
+                Task {
+                    await storeKitService.checkSubscriptionStatus()
+                }
+            }
+        }
+        .onChange(of: authViewModel.isGuest) { wasGuest, isGuest in
+            // When guest upgrades to full account, check subscription status
+            if wasGuest && !isGuest && authViewModel.isAuthenticated {
+                Task {
+                    await storeKitService.checkSubscriptionStatus()
+                }
             }
         }
     }
@@ -63,6 +85,8 @@ struct AuthFlowView: View {
     ContentView()
         .environment(authVM)
         .environment(ImageGridViewModel())
+        .environment(AppearanceManager())
+        .environment(StoreKitService())
         .onAppear {
             // Note: In real app, this would be set by successful login
         }
@@ -72,4 +96,6 @@ struct AuthFlowView: View {
     ContentView()
         .environment(AuthViewModel())
         .environment(ImageGridViewModel())
+        .environment(AppearanceManager())
+        .environment(StoreKitService())
 }

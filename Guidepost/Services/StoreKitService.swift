@@ -64,10 +64,10 @@ final class StoreKitService {
         // Start listening for transaction updates
         transactionListener = listenForTransactions()
         
-        // Load products and check subscription status on init
+        // Only load products on init - subscription status is checked when user signs in
+        // This prevents showing previous Apple ID's subscription to new guest users
         Task {
             await loadProducts()
-            await checkSubscriptionStatus()
         }
     }
     
@@ -76,6 +76,16 @@ final class StoreKitService {
     func cleanup() {
         transactionListener?.cancel()
         transactionListener = nil
+    }
+    
+    /// Reset subscription status to trial (called on sign out)
+    /// This ensures a new user/guest doesn't see the previous user's subscription status
+    func resetSubscriptionStatus() {
+        subscriptionStatus = .trial
+        
+        #if DEBUG
+        print("🛒 Subscription status reset to Trial")
+        #endif
     }
     
     // MARK: - Product Loading
@@ -116,7 +126,51 @@ final class StoreKitService {
     
     /// Check current subscription entitlement status
     func checkSubscriptionStatus() async {
-        // Check for active subscription in Transaction.currentEntitlements
+        // First, try to get detailed subscription status from products
+        for product in products {
+            guard let subscription = product.subscription else { continue }
+            
+            do {
+                let statuses = try await subscription.status
+                
+                for status in statuses {
+                    guard case .verified(let renewalInfo) = status.renewalInfo,
+                          case .verified(let transaction) = status.transaction else {
+                        continue
+                    }
+                    
+                    // Check if this subscription is active
+                    let isActive = status.state == .subscribed || status.state == .inGracePeriod
+                    
+                    if isActive && SubscriptionProduct.allIdentifiers.contains(transaction.productID) {
+                        // Check if auto-renew is enabled
+                        let willAutoRenew = renewalInfo.willAutoRenew
+                        
+                        let subscriptionStatus = SubscriptionStatus(
+                            plan: .pro,
+                            expirationDate: transaction.expirationDate,
+                            willRenew: willAutoRenew
+                        )
+                        self.subscriptionStatus = subscriptionStatus
+                        
+                        #if DEBUG
+                        print("🛒 Active subscription found: \(transaction.productID)")
+                        print("   Expires: \(transaction.expirationDate?.description ?? "never")")
+                        print("   Will renew: \(willAutoRenew)")
+                        print("   State: \(status.state)")
+                        #endif
+                        
+                        return
+                    }
+                }
+            } catch {
+                #if DEBUG
+                print("🛒 Error checking subscription status: \(error)")
+                #endif
+            }
+        }
+        
+        // Fallback: Check currentEntitlements if products aren't loaded yet
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else {
                 continue
@@ -124,16 +178,16 @@ final class StoreKitService {
             
             // Check if this is one of our subscription products
             if SubscriptionProduct.allIdentifiers.contains(transaction.productID) {
-                // Found an active subscription
+                // Found an active subscription (assume will renew since we can't check here)
                 let status = SubscriptionStatus(
                     plan: .pro,
                     expirationDate: transaction.expirationDate,
-                    willRenew: transaction.revocationDate == nil
+                    willRenew: true // Default to true, detailed check above is more accurate
                 )
                 subscriptionStatus = status
                 
                 #if DEBUG
-                print("🛒 Active subscription found: \(transaction.productID)")
+                print("🛒 Active subscription found (fallback): \(transaction.productID)")
                 print("   Expires: \(transaction.expirationDate?.description ?? "never")")
                 #endif
                 
