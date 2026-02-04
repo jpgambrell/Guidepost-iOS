@@ -44,21 +44,56 @@ class AuthViewModel {
     // Guest account state
     var isGuest: Bool = false
     
-    // Guest upload tracking (stored in UserDefaults)
-    private let guestUploadCountKey = "com.guidepost.guestUploadCount"
-    private let maxGuestUploads = 10
+    // MARK: - Trial Upload Tracking
+    // Applies to all users on Trial plan (guests and registered users without subscription)
     
+    private let guestUploadCountKey = "com.guidepost.guestUploadCount"
+    private let userUploadCountKeyPrefix = "com.guidepost.uploadCount."
+    
+    /// Maximum uploads allowed on the Trial plan
+    let maxTrialUploads = 10
+    
+    /// Current upload count for trial users
+    /// Uses guest key for guests, user-specific key for registered users
+    var trialUploadCount: Int {
+        get {
+            let key = uploadCountKey
+            return UserDefaults.standard.integer(forKey: key)
+        }
+        set {
+            let key = uploadCountKey
+            UserDefaults.standard.set(newValue, forKey: key)
+        }
+    }
+    
+    /// The appropriate UserDefaults key for tracking uploads based on user type
+    private var uploadCountKey: String {
+        if isGuest {
+            return guestUploadCountKey
+        } else if let userId = currentUser?.userId {
+            return "\(userUploadCountKeyPrefix)\(userId)"
+        }
+        // Fallback to guest key if no user ID available
+        return guestUploadCountKey
+    }
+    
+    /// Remaining uploads available on the Trial plan
+    var remainingTrialUploads: Int {
+        max(0, maxTrialUploads - trialUploadCount)
+    }
+    
+    // Legacy properties for backwards compatibility
     var guestUploadCount: Int {
-        get { UserDefaults.standard.integer(forKey: guestUploadCountKey) }
-        set { UserDefaults.standard.set(newValue, forKey: guestUploadCountKey) }
+        get { trialUploadCount }
+        set { trialUploadCount = newValue }
     }
     
     var canGuestUpload: Bool {
-        !isGuest || guestUploadCount < maxGuestUploads
+        !isGuest || trialUploadCount < maxTrialUploads
     }
     
     var remainingGuestUploads: Int {
-        max(0, maxGuestUploads - guestUploadCount)
+        remainingTrialUploads
     }
     
     // MARK: - Private
@@ -308,13 +343,21 @@ class AuthViewModel {
     // MARK: - Sign Out
     
     func signOut() {
+        // Reset trial upload count for guests before clearing flags
+        // Registered users keep their count persisted across sessions
+        let wasGuest = isGuest
+        
         authService.clearTokens()
         authService.clearGuestFlags()
         isAuthenticated = false
         isGuest = false
         currentUser = nil
-        // Reset guest upload count on sign out
-        guestUploadCount = 0
+        
+        if wasGuest {
+            // Clear the guest upload count key
+            UserDefaults.standard.removeObject(forKey: guestUploadCountKey)
+        }
+        
         clearFormFields()
         authFlowState = .signIn
     }
@@ -333,7 +376,8 @@ class AuthViewModel {
             await MainActor.run {
                 self.isAuthenticated = true
                 self.isGuest = true
-                self.guestUploadCount = 0
+                // Reset trial upload count for new guest session
+                UserDefaults.standard.removeObject(forKey: self.guestUploadCountKey)
                 self.isLoading = false
             }
             
@@ -373,10 +417,15 @@ class AuthViewModel {
             try await authService.deleteAccount()
             
             await MainActor.run {
+                // Clear upload count for deleted account
+                UserDefaults.standard.removeObject(forKey: self.guestUploadCountKey)
+                if let userId = self.currentUser?.userId {
+                    UserDefaults.standard.removeObject(forKey: "\(self.userUploadCountKeyPrefix)\(userId)")
+                }
+                
                 self.isAuthenticated = false
                 self.isGuest = false
                 self.currentUser = nil
-                self.guestUploadCount = 0
                 self.clearFormFields()
                 self.authFlowState = .signIn
                 self.isLoading = false
@@ -404,10 +453,10 @@ class AuthViewModel {
             familyName: familyName
         )
         
-        // Update local state
+        // Update local state - note: trial upload count persists after upgrade
+        // User keeps their usage count, it just switches to the user-specific key
         await MainActor.run {
             self.isGuest = false
-            self.guestUploadCount = 0
         }
         
         // Fetch updated user profile
@@ -423,11 +472,23 @@ class AuthViewModel {
         }
     }
     
-    // MARK: - Guest Upload Tracking
+    // MARK: - Trial Upload Tracking Methods
     
+    /// Increment the upload count for trial users
+    /// This should be called after a successful upload for users on the Trial plan
+    func incrementTrialUploadCount() {
+        trialUploadCount += 1
+    }
+    
+    /// Reset the trial upload count (called on sign out or account deletion)
+    func resetTrialUploadCount() {
+        trialUploadCount = 0
+    }
+    
+    // Legacy method for backwards compatibility
     func incrementGuestUploadCount() {
         if isGuest {
-            guestUploadCount += 1
+            incrementTrialUploadCount()
         }
     }
     

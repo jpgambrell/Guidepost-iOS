@@ -12,6 +12,7 @@ struct GuidepostApp: App {
     @State private var authViewModel = AuthViewModel()
     @State private var imageGridViewModel = ImageGridViewModel()
     @State private var appearanceManager = AppearanceManager()
+    @State private var storeKitService = StoreKitService()
     @State private var showLaunchScreen = true
 
     var body: some Scene {
@@ -21,6 +22,7 @@ struct GuidepostApp: App {
                     .environment(authViewModel)
                     .environment(imageGridViewModel)
                     .environment(appearanceManager)
+                    .environment(storeKitService)
                 
                 if showLaunchScreen {
                     LaunchScreenView()

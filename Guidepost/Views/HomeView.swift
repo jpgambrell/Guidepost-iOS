@@ -351,9 +351,11 @@ struct ProfileSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(AppearanceManager.self) private var appearanceManager
+    @Environment(StoreKitService.self) private var storeKitService
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
     @State private var showUpgradeSheet = false
+    @State private var showSubscriptionSheet = false
     @State private var isDeleting = false
     
     var body: some View {
@@ -481,6 +483,88 @@ struct ProfileSheetView: View {
                         }
                     }
                     .padding(.horizontal)
+                }
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Subscription section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Subscription")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                    
+                    // Subscription status row
+                    SubscriptionStatusRow(
+                        plan: storeKitService.currentPlan,
+                        expirationDate: storeKitService.subscriptionStatus.expirationDate,
+                        remainingUploads: authViewModel.remainingTrialUploads
+                    )
+                    .padding(.horizontal)
+                    
+                    // Upgrade to Pro button (for trial users)
+                    if !storeKitService.isSubscribed {
+                        Button(action: { showSubscriptionSheet = true }) {
+                            HStack {
+                                Image(systemName: "star.circle.fill")
+                                    .font(.system(size: 18))
+                                    .frame(width: 28)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Upgrade to Pro")
+                                        .fontWeight(.medium)
+                                    Text("Unlimited uploads and premium features")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.8))
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
+                            .foregroundStyle(.white)
+                            .padding()
+                            .background(
+                                LinearGradient(
+                                    colors: [.cyan, .blue],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.horizontal)
+                    } else {
+                        // Manage Subscription button (for Pro users)
+                        Button(action: {
+                            Task {
+                                await storeKitService.openManageSubscriptions()
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "gear")
+                                    .font(.system(size: 18))
+                                    .frame(width: 28)
+                                
+                                Text("Manage Subscription")
+                                    .fontWeight(.medium)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .foregroundStyle(.primary)
+                            .padding()
+                            .background(Color.secondary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.horizontal)
+                    }
                 }
                 
                 Divider()
@@ -637,7 +721,65 @@ struct ProfileSheetView: View {
             .sheet(isPresented: $showUpgradeSheet) {
                 UpgradeAccountView()
             }
+            .sheet(isPresented: $showSubscriptionSheet) {
+                SubscriptionView()
+            }
         }
+    }
+}
+
+// MARK: - Subscription Status Row
+
+struct SubscriptionStatusRow: View {
+    let plan: SubscriptionPlan
+    let expirationDate: Date?
+    let remainingUploads: Int
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(plan.displayName)
+                            .font(.headline)
+                            .foregroundStyle(Color.theme.textPrimary)
+                        
+                        Text("Plan")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.theme.textSecondary)
+                    }
+                    
+                    if plan == .trial {
+                        Text("\(remainingUploads) of 10 uploads remaining")
+                            .font(.caption)
+                            .foregroundStyle(remainingUploads > 3 ? Color.theme.textSecondary : .orange)
+                    } else if let date = expirationDate {
+                        Text("Renews \(date.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.caption)
+                            .foregroundStyle(Color.theme.textSecondary)
+                    }
+                }
+                
+                Spacer()
+                
+                // Plan badge
+                Text(plan == .pro ? "Active" : "Free")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(plan == .pro ? Color.green : Color.orange)
+                    )
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.theme.backgroundSecondary)
+        )
     }
 }
 

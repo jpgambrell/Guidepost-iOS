@@ -66,6 +66,7 @@ struct ImageUploadView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(ImageGridViewModel.self) private var viewModel
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(StoreKitService.self) private var storeKitService
 
     @State private var selectedImage: UIImage?
     @State private var selectedMetadata: ImageMetadata?
@@ -77,9 +78,20 @@ struct ImageUploadView: View {
     @State private var showPermissionAlert = false
     @State private var showPhotoPermissionAlert = false
     @State private var showLocationPermissionAlert = false
-    @State private var showGuestLimitAlert = false
+    @State private var showTrialLimitAlert = false
+    @State private var showSubscriptionSheet = false
     
     @State private var locationManager = CameraLocationManager()
+    
+    /// Whether the user can upload based on their subscription status
+    private var canUpload: Bool {
+        // Pro users have unlimited uploads
+        if storeKitService.isSubscribed {
+            return true
+        }
+        // Trial users (guests and registered without subscription) have limited uploads
+        return authViewModel.remainingTrialUploads > 0
+    }
 
     var body: some View {
         NavigationStack {
@@ -146,14 +158,23 @@ struct ImageUploadView: View {
 
                 Spacer()
                 
-                // Guest upload limit info
-                if authViewModel.isGuest {
+                // Trial upload limit info (shown for users without Pro subscription)
+                if !storeKitService.isSubscribed {
                     HStack {
                         Image(systemName: "info.circle.fill")
-                            .foregroundStyle(.orange)
-                        Text("\(authViewModel.remainingGuestUploads) free upload\(authViewModel.remainingGuestUploads == 1 ? "" : "s") remaining")
+                            .foregroundStyle(authViewModel.remainingTrialUploads <= 3 ? .orange : .blue)
+                        Text("\(authViewModel.remainingTrialUploads) free upload\(authViewModel.remainingTrialUploads == 1 ? "" : "s") remaining")
                             .font(.callout)
                             .foregroundStyle(.secondary)
+                        
+                        Spacer()
+                        
+                        Button("Upgrade") {
+                            showSubscriptionSheet = true
+                        }
+                        .font(.callout)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.theme.accent)
                     }
                     .padding(.horizontal)
                 }
@@ -255,16 +276,24 @@ struct ImageUploadView: View {
             } message: {
                 Text("Location access is recommended to capture where your photos were taken. You can enable it in Settings.")
             }
-            .alert("Upload Limit Reached", isPresented: $showGuestLimitAlert) {
-                Button("Create Account") {
-                    // Sign out guest account and navigate to sign up
-                    authViewModel.signOut()
-                    authViewModel.navigateToSignUp()
-                    dismiss()
+            .alert("Upload Limit Reached", isPresented: $showTrialLimitAlert) {
+                Button("Upgrade to Pro") {
+                    showSubscriptionSheet = true
+                }
+                if authViewModel.isGuest {
+                    Button("Create Account") {
+                        // Sign out guest account and navigate to sign up
+                        authViewModel.signOut()
+                        authViewModel.navigateToSignUp()
+                        dismiss()
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("You've used all 10 free uploads. Create an account to continue uploading unlimited images.")
+                Text("You've used all 10 free uploads. Upgrade to Pro for unlimited uploads and premium features.")
+            }
+            .sheet(isPresented: $showSubscriptionSheet) {
+                SubscriptionView()
             }
 
         }
@@ -273,9 +302,9 @@ struct ImageUploadView: View {
     private func uploadImage() {
         guard let image = selectedImage else { return }
         
-        // Check guest upload limit
-        if authViewModel.isGuest && !authViewModel.canGuestUpload {
-            showGuestLimitAlert = true
+        // Check upload limit for Trial users (both guests and registered without subscription)
+        if !canUpload {
+            showTrialLimitAlert = true
             return
         }
 
@@ -285,8 +314,10 @@ struct ImageUploadView: View {
         Task {
             do {
                 _ = try await viewModel.uploadImage(image, metadata: selectedMetadata)
-                // Increment guest upload count on success
-                authViewModel.incrementGuestUploadCount()
+                // Increment trial upload count on success (only matters for Trial users)
+                if !storeKitService.isSubscribed {
+                    authViewModel.incrementTrialUploadCount()
+                }
                 showSuccessMessage = true
             } catch {
                 uploadError = error.localizedDescription
