@@ -108,6 +108,8 @@ struct SubscriptionView: View {
                     selectedProduct = monthly
                 }
             }
+            .environment(\.subscriptionTermsOfServiceURL, Self.termsOfServiceURL)
+            .environment(\.privacyPolicyURL, Self.privacyPolicyURL)
         }
     }
     
@@ -325,16 +327,30 @@ struct SubscriptionView: View {
     
     // MARK: - Legal Section
     
+    private static let termsOfServiceURL = URL(string: "https://guidepost.app/terms")!
+    private static let privacyPolicyURL = URL(string: "https://www.freeprivacypolicy.com/live/d758cdad-ddfb-4ba7-9f37-aab1c489e1a0")!
+    
     private var legalSection: some View {
         VStack(spacing: 8) {
-            Text("Subscriptions will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.")
-                .font(.caption2)
-                .foregroundStyle(Color.theme.textSecondary)
-                .multilineTextAlignment(.center)
+            if let product = selectedProduct, let subscription = product.subscription {
+                Text("A purchase of \(product.displayPrice) will be applied to your Apple ID account \(subscription.subscriptionPeriod.displayUnit). Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period. You can manage and cancel your subscriptions in your App Store account settings. Any unused portion of a free trial period will be forfeited upon purchasing a subscription.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period. You can manage and cancel your subscriptions in your App Store account settings.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
             
             HStack(spacing: 16) {
-                Link("Terms of Service", destination: URL(string: "https://guidepost.app/terms")!)
-                Link("Privacy Policy", destination: URL(string: "https://www.freeprivacypolicy.com/live/d758cdad-ddfb-4ba7-9f37-aab1c489e1a0")!)
+                Link("Terms of Use (EULA)", destination: Self.termsOfServiceURL)
+                
+                Text("•")
+                    .foregroundStyle(Color.theme.textSecondary)
+                
+                Link("Privacy Policy", destination: Self.privacyPolicyURL)
             }
             .font(.caption)
             .foregroundStyle(Color.theme.accent)
