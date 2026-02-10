@@ -108,8 +108,6 @@ struct SubscriptionView: View {
                     selectedProduct = monthly
                 }
             }
-            .environment(\.subscriptionTermsOfServiceURL, Self.termsOfServiceURL)
-            .environment(\.privacyPolicyURL, Self.privacyPolicyURL)
         }
     }
     
