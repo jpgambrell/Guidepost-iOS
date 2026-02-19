@@ -31,14 +31,6 @@ struct SubscriptionView: View {
                         // Header
                         headerSection
                         
-                        // Guest account warning - must create account first
-                        if authViewModel.isGuest {
-                            guestAccountWarning
-                        }
-                        
-                        // Features comparison
-                        featuresSection
-                        
                         // Subscription options
                         if storeKitService.isLoadingProducts {
                             loadingSection
@@ -68,8 +60,7 @@ struct SubscriptionView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Upgrade to Pro")
-            .navigationBarTitleDisplayMode(.inline)
+            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -111,36 +102,6 @@ struct SubscriptionView: View {
         }
     }
     
-    // MARK: - Guest Account Warning
-    
-    private var guestAccountWarning: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.title2)
-                .foregroundStyle(.orange)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Account Required")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.theme.textPrimary)
-                
-                Text("Create an account to subscribe. This ensures you can always access your subscription.")
-                    .font(.caption)
-                    .foregroundStyle(Color.theme.textSecondary)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.orange.opacity(0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                )
-        )
-    }
-    
     // MARK: - Create Account Button (for guests)
     
     private var createAccountButton: some View {
@@ -156,7 +117,10 @@ struct SubscriptionView: View {
             .frame(height: 50)
             .background(
                 LinearGradient(
-                    colors: [.cyan, .blue],
+                    colors: [
+                        Color(red: 0.063, green: 0.725, blue: 0.506),
+                        Color(red: 0.020, green: 0.588, blue: 0.412)
+                    ],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
@@ -180,46 +144,17 @@ struct SubscriptionView: View {
                     )
                 )
             
-            Text("Unlock Pro Features")
+            Text("Upgrade to Pro")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.theme.textPrimary)
             
-            Text("Get unlimited uploads and premium features")
+            Text("Get Unlimited Uploads and Image Analysis")
                 .font(.subheadline)
                 .foregroundStyle(Color.theme.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.top, 20)
-    }
-    
-    // MARK: - Features Section
-    
-    private var featuresSection: some View {
-        VStack(spacing: 16) {
-            FeatureComparisonRow(
-                feature: "Image Uploads",
-                trialValue: "10 uploads",
-                proValue: "Unlimited"
-            )
-            
-            FeatureComparisonRow(
-                feature: "Image Analysis",
-                trialValue: "Basic",
-                proValue: "Priority"
-            )
-            
-            FeatureComparisonRow(
-                feature: "Support",
-                trialValue: "Community",
-                proValue: "Priority"
-            )
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.theme.backgroundSecondary)
-        )
     }
     
     // MARK: - Loading Section
@@ -325,7 +260,7 @@ struct SubscriptionView: View {
     
     // MARK: - Legal Section
     
-    private static let termsOfServiceURL = URL(string: "https://guidepost.app/terms")!
+    private static let termsOfServiceURL = URL(string: "https://subvoc.al/Apps/Guidepost/terms")!
     private static let privacyPolicyURL = URL(string: "https://www.freeprivacypolicy.com/live/d758cdad-ddfb-4ba7-9f37-aab1c489e1a0")!
     
     private var legalSection: some View {
@@ -383,48 +318,6 @@ struct SubscriptionView: View {
         } catch {
             errorMessage = "Failed to restore purchases. Please try again."
             showError = true
-        }
-    }
-}
-
-// MARK: - Feature Comparison Row
-
-private struct FeatureComparisonRow: View {
-    let feature: String
-    let trialValue: String
-    let proValue: String
-    
-    var body: some View {
-        HStack {
-            Text(feature)
-                .font(.subheadline)
-                .foregroundStyle(Color.theme.textPrimary)
-            
-            Spacer()
-            
-            HStack(spacing: 24) {
-                VStack(spacing: 2) {
-                    Text("Trial")
-                        .font(.caption2)
-                        .foregroundStyle(Color.theme.textSecondary)
-                    Text(trialValue)
-                        .font(.caption)
-                        .foregroundStyle(Color.theme.textSecondary)
-                }
-                .frame(width: 70)
-                
-                VStack(spacing: 2) {
-                    Text("Pro")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.theme.accent)
-                    Text(proValue)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.theme.accent)
-                }
-                .frame(width: 70)
-            }
         }
     }
 }

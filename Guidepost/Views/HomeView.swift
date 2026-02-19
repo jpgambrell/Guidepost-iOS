@@ -336,10 +336,10 @@ struct ProfileButton: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 36, height: 36)
+                .frame(width: 50, height: 50)
             
             Image(systemName: "person.fill")
-                .font(.system(size: 14))
+                .font(.system(size: 20))
                 .foregroundStyle(.white)
         }
     }
@@ -354,7 +354,6 @@ struct ProfileSheetView: View {
     @Environment(StoreKitService.self) private var storeKitService
     @State private var showLogoutConfirmation = false
     @State private var showDeleteAccountConfirmation = false
-    @State private var showUpgradeSheet = false
     @State private var showSubscriptionSheet = false
     @State private var isDeleting = false
     
@@ -362,7 +361,8 @@ struct ProfileSheetView: View {
         @Bindable var appearanceManager = appearanceManager
         
         NavigationStack {
-            VStack(spacing: 24) {
+            ScrollView {
+                VStack(spacing: 24) {
                 // Profile header
                 VStack(spacing: 16) {
                     ZStack {
@@ -383,7 +383,7 @@ struct ProfileSheetView: View {
                             .frame(width: 80, height: 80)
                             .shadow(color: authViewModel.isGuest ? Color.gray.opacity(0.4) : Color(red: 0.020, green: 0.588, blue: 0.412).opacity(0.4), radius: 10)
                         
-                        Image(systemName: authViewModel.isGuest ? "person.fill.questionmark" : "person.fill")
+                        Image(systemName: "person.fill")
                             .font(.system(size: 30))
                             .foregroundStyle(.white)
                     }
@@ -530,7 +530,10 @@ struct ProfileSheetView: View {
                             .padding()
                             .background(
                                 LinearGradient(
-                                    colors: [.cyan, .blue],
+                                    colors: [
+                                        Color(red: 0.063, green: 0.725, blue: 0.506),
+                                        Color(red: 0.020, green: 0.588, blue: 0.412)
+                                    ],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -571,52 +574,8 @@ struct ProfileSheetView: View {
                 Divider()
                     .padding(.horizontal)
                 
-                // Account section
+                // Account actions
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Account")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal)
-                    
-                    // Upgrade Account button (for guests only)
-                    if authViewModel.isGuest {
-                        Button(action: { showUpgradeSheet = true }) {
-                            HStack {
-                                Image(systemName: "arrow.up.circle.fill")
-                                    .font(.system(size: 18))
-                                    .frame(width: 28)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Upgrade to Full Account")
-                                        .fontWeight(.medium)
-                                    Text("Keep your images and unlock unlimited uploads")
-                                        .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.8))
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.white.opacity(0.7))
-                            }
-                            .foregroundStyle(.white)
-                            .padding()
-                            .background(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.063, green: 0.725, blue: 0.506), // #10B981
-                                        Color(red: 0.020, green: 0.588, blue: 0.412)  // #059669
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .padding(.horizontal)
-                    }
-                    
                     // Sign Out button
                     Button(action: { showLogoutConfirmation = true }) {
                         HStack {
@@ -670,15 +629,14 @@ struct ProfileSheetView: View {
                     .padding(.horizontal)
                 }
                 
-                Spacer()
-                
                 // App version
-                Text("Guidepost v1.0.0")
+                Text("Guidepost v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .padding(.top, 8)
                     .padding(.bottom)
+                }
             }
-            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -718,9 +676,6 @@ struct ProfileSheetView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This action cannot be undone. Your account and all associated data (images, analysis results) will be permanently deleted.")
-            }
-            .sheet(isPresented: $showUpgradeSheet) {
-                UpgradeAccountView()
             }
             .sheet(isPresented: $showSubscriptionSheet) {
                 SubscriptionView()
