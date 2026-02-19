@@ -55,6 +55,7 @@ struct SubscriptionView: View {
                         }
                         
                         // Legal links
+                        Spacer()
                         legalSection
                     }
                     .padding()
