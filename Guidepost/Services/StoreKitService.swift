@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os.log
 import StoreKit
 
 // MARK: - StoreKit Service
@@ -14,6 +15,8 @@ import StoreKit
 @MainActor
 @Observable
 final class StoreKitService {
+    
+    nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.gambrell.guidepost", category: "StoreKit")
     
     // MARK: - Published Properties
     
@@ -82,10 +85,7 @@ final class StoreKitService {
     /// This ensures a new user/guest doesn't see the previous user's subscription status
     func resetSubscriptionStatus() {
         subscriptionStatus = .trial
-        
-        #if DEBUG
-        print("🛒 Subscription status reset to Trial")
-        #endif
+        Self.logger.info("Subscription status reset to Trial")
     }
     
     // MARK: - Product Loading
@@ -95,30 +95,32 @@ final class StoreKitService {
         guard !isLoadingProducts else { return }
         
         isLoadingProducts = true
+        errorMessage = nil
         defer { isLoadingProducts = false }
         
+        let requestedIDs = SubscriptionProduct.allIdentifiers
+        Self.logger.info("Loading products for IDs: \(requestedIDs.sorted().joined(separator: ", "))")
+        
         do {
-            let storeProducts = try await Product.products(for: SubscriptionProduct.allIdentifiers)
+            let storeProducts = try await Product.products(for: requestedIDs)
             
-            // Sort products: monthly first, then yearly
-            products = storeProducts.sorted { first, second in
-                if first.id == SubscriptionProduct.monthlyPro.rawValue {
-                    return true
-                }
-                return false
+            if storeProducts.isEmpty {
+                Self.logger.error("Product.products(for:) returned 0 products for IDs: \(requestedIDs.sorted().joined(separator: ", ")). Verify products are configured and approved in App Store Connect.")
+                errorMessage = "No subscription products found. Please ensure your App Store account is set up correctly, or try again later."
+                return
             }
             
-            #if DEBUG
-            print("🛒 Loaded \(products.count) products:")
+            products = storeProducts.sorted { first, _ in
+                first.id == SubscriptionProduct.monthlyPro.rawValue
+            }
+            
+            Self.logger.info("Loaded \(self.products.count) products successfully")
             for product in products {
-                print("   - \(product.id): \(product.displayPrice)")
+                Self.logger.info("  Product: \(product.id) — \(product.displayPrice)")
             }
-            #endif
         } catch {
-            #if DEBUG
-            print("🛒 Failed to load products: \(error)")
-            #endif
-            errorMessage = "Failed to load subscription options"
+            Self.logger.error("Failed to load products: \(error.localizedDescription)")
+            errorMessage = "Failed to load subscription options: \(error.localizedDescription)"
         }
     }
     
@@ -143,7 +145,6 @@ final class StoreKitService {
                     let isActive = status.state == .subscribed || status.state == .inGracePeriod
                     
                     if isActive && SubscriptionProduct.allIdentifiers.contains(transaction.productID) {
-                        // Check if auto-renew is enabled
                         let willAutoRenew = renewalInfo.willAutoRenew
                         
                         let subscriptionStatus = SubscriptionStatus(
@@ -153,20 +154,13 @@ final class StoreKitService {
                         )
                         self.subscriptionStatus = subscriptionStatus
                         
-                        #if DEBUG
-                        print("🛒 Active subscription found: \(transaction.productID)")
-                        print("   Expires: \(transaction.expirationDate?.description ?? "never")")
-                        print("   Will renew: \(willAutoRenew)")
-                        print("   State: \(status.state)")
-                        #endif
+                        Self.logger.info("Active subscription: \(transaction.productID), expires: \(transaction.expirationDate?.description ?? "never"), willRenew: \(willAutoRenew)")
                         
                         return
                     }
                 }
             } catch {
-                #if DEBUG
-                print("🛒 Error checking subscription status: \(error)")
-                #endif
+                Self.logger.error("Error checking subscription status: \(error.localizedDescription)")
             }
         }
         
@@ -178,29 +172,21 @@ final class StoreKitService {
             
             // Check if this is one of our subscription products
             if SubscriptionProduct.allIdentifiers.contains(transaction.productID) {
-                // Found an active subscription (assume will renew since we can't check here)
                 let status = SubscriptionStatus(
                     plan: .pro,
                     expirationDate: transaction.expirationDate,
-                    willRenew: true // Default to true, detailed check above is more accurate
+                    willRenew: true
                 )
                 subscriptionStatus = status
                 
-                #if DEBUG
-                print("🛒 Active subscription found (fallback): \(transaction.productID)")
-                print("   Expires: \(transaction.expirationDate?.description ?? "never")")
-                #endif
+                Self.logger.info("Active subscription (fallback): \(transaction.productID), expires: \(transaction.expirationDate?.description ?? "never")")
                 
                 return
             }
         }
         
-        // No active subscription found
         subscriptionStatus = .trial
-        
-        #if DEBUG
-        print("🛒 No active subscription - using Trial plan")
-        #endif
+        Self.logger.info("No active subscription — using Trial plan")
     }
     
     // MARK: - Purchase
@@ -215,9 +201,7 @@ final class StoreKitService {
         isPurchasing = true
         defer { isPurchasing = false }
         
-        #if DEBUG
-        print("🛒 Attempting purchase: \(product.id)")
-        #endif
+        Self.logger.info("Attempting purchase: \(product.id)")
         
         do {
             let result = try await product.purchase()
@@ -235,22 +219,15 @@ final class StoreKitService {
                 // Update subscription status
                 await checkSubscriptionStatus()
                 
-                #if DEBUG
-                print("🛒 Purchase successful: \(product.id)")
-                #endif
-                
+                Self.logger.info("Purchase successful: \(product.id)")
                 return true
                 
             case .userCancelled:
-                #if DEBUG
-                print("🛒 Purchase cancelled by user")
-                #endif
+                Self.logger.info("Purchase cancelled by user")
                 throw SubscriptionError.purchaseCancelled
                 
             case .pending:
-                #if DEBUG
-                print("🛒 Purchase pending (e.g., Ask to Buy)")
-                #endif
+                Self.logger.info("Purchase pending (Ask to Buy)")
                 return false
                 
             @unknown default:
@@ -259,9 +236,7 @@ final class StoreKitService {
         } catch let error as SubscriptionError {
             throw error
         } catch {
-            #if DEBUG
-            print("🛒 Purchase error: \(error)")
-            #endif
+            Self.logger.error("Purchase error: \(error.localizedDescription)")
             throw SubscriptionError.unknown(error)
         }
     }
@@ -270,19 +245,10 @@ final class StoreKitService {
     
     /// Restore previous purchases
     func restorePurchases() async throws {
-        #if DEBUG
-        print("🛒 Restoring purchases...")
-        #endif
-        
-        // Sync with App Store
+        Self.logger.info("Restoring purchases...")
         try await AppStore.sync()
-        
-        // Re-check subscription status
         await checkSubscriptionStatus()
-        
-        #if DEBUG
-        print("🛒 Restore complete. Current plan: \(currentPlan.displayName)")
-        #endif
+        Self.logger.info("Restore complete. Current plan: \(self.currentPlan.displayName)")
     }
     
     // MARK: - Manage Subscription
@@ -296,9 +262,7 @@ final class StoreKitService {
         do {
             try await AppStore.showManageSubscriptions(in: windowScene)
         } catch {
-            #if DEBUG
-            print("🛒 Failed to open manage subscriptions: \(error)")
-            #endif
+            Self.logger.error("Failed to open manage subscriptions: \(error.localizedDescription)")
         }
     }
     
@@ -312,15 +276,9 @@ final class StoreKitService {
                     continue
                 }
                 
-                // Finish the transaction
                 await transaction.finish()
-                
-                // Update subscription status on main actor
                 await self?.checkSubscriptionStatus()
-                
-                #if DEBUG
-                print("🛒 Transaction update: \(transaction.productID)")
-                #endif
+                Self.logger.info("Transaction update: \(transaction.productID)")
             }
         }
     }

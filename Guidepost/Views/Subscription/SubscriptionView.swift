@@ -93,7 +93,17 @@ struct SubscriptionView: View {
                 )
             }
             .task {
-                // Select yearly by default if available
+                if storeKitService.products.isEmpty && !storeKitService.isLoadingProducts {
+                    await storeKitService.loadProducts()
+                }
+                
+                if selectedProduct == nil, let yearly = storeKitService.yearlyProduct {
+                    selectedProduct = yearly
+                } else if selectedProduct == nil, let monthly = storeKitService.monthlyProduct {
+                    selectedProduct = monthly
+                }
+            }
+            .onChange(of: storeKitService.products) {
                 if selectedProduct == nil, let yearly = storeKitService.yearlyProduct {
                     selectedProduct = yearly
                 } else if selectedProduct == nil, let monthly = storeKitService.monthlyProduct {
@@ -183,10 +193,17 @@ struct SubscriptionView: View {
                 .font(.headline)
                 .foregroundStyle(Color.theme.textPrimary)
             
-            Text("Please check your internet connection and try again.")
-                .font(.subheadline)
-                .foregroundStyle(Color.theme.textSecondary)
-                .multilineTextAlignment(.center)
+            if let detail = storeKitService.errorMessage {
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("Please check your internet connection and try again.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
             
             Button("Retry") {
                 Task {
